@@ -37,5 +37,7 @@ def git(*arguments):
     environment = os.environ.copy()
     if executable is None:
         executable = str(PROJECT / "work/build-tools/usr/bin/git")
+        environment["PATH"] = str(PROJECT / "work/build-tools/usr/bin") + os.pathsep + environment["PATH"]
+        environment["GIT_EXEC_PATH"] = str(PROJECT / "work/build-tools/usr/lib/git-core")
         environment["LD_LIBRARY_PATH"] = str(PROJECT / "work/build-tools/usr/lib/x86_64-linux-gnu")
     return subprocess.check_output([executable, "-C", str(PROJECT), *arguments], env=environment)

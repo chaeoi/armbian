@@ -6,6 +6,7 @@
 
 | 记录 | 内容 |
 | --- | --- |
+| [仓库与构建验证](validation/REPOSITORY-20261108.md) | 全量和增量交叉编译、源码包独立检查及主机测试；新构建未上机 |
 | [最终固化](validation/FINAL-SYSTEM-20261107.md) | 单系统安装、精简、Wi-Fi 复位、两次普通重启及最终校验 |
 | [系统审计](validation/SYSTEM-AUDIT-20261106.md) | r4 时期的 CPU、存储、网络及用户空间测试范围 |
 | [SD 驱动修复](validation/SD-INVESTIGATION-20261106.md) | r5/r6 读取超时分析及 SD 专项回归 |
