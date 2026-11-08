@@ -46,11 +46,30 @@ jobs:
           mkdir -p work
           CONFIG_DEFS_ONLY=yes ./compile.sh config-dump-json BOARD=ec6108v9 BRANCH=edge RELEASE=jammy > work/ec6108v9-config.json
           python3 tools/check-framework.py work/ec6108v9-config.json
+      - name: Restore native build artifacts
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            work/armbian-build/output/debs
+            work/armbian-build/output/packages-hashed
+            work/armbian-build/cache/rootfs
+          key: ec6108v9-jammy-${{ hashFiles('config/sources/armbian-build.json', 'config/sources/linux-hi3798mv100.json', 'config/kernel/**', 'patch/**') }}-${{ github.run_id }}
+          restore-keys: |
+            ec6108v9-jammy-${{ hashFiles('config/sources/armbian-build.json', 'config/sources/linux-hi3798mv100.json', 'config/kernel/**', 'patch/**') }}-
       - name: Build with the official Armbian framework
         run: |
           ./compile.sh build BOARD=ec6108v9 BRANCH=edge RELEASE=jammy \
             BUILD_MINIMAL=yes BUILD_DESKTOP=no KERNEL_CONFIGURE=no \
             KERNEL_GIT=shallow PREFER_DOCKER=no
+      - name: Save native build artifacts
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            work/armbian-build/output/debs
+            work/armbian-build/output/packages-hashed
+            work/armbian-build/cache/rootfs
+          key: ec6108v9-jammy-${{ hashFiles('config/sources/armbian-build.json', 'config/sources/linux-hi3798mv100.json', 'config/kernel/**', 'patch/**') }}-${{ github.run_id }}
       - name: Verify USB installer disk image
         run: python3 tools/verify-usb.py output/images/*.img.xz
       - name: Export corresponding adaptation sources

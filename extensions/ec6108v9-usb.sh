@@ -9,7 +9,8 @@ function extension_prepare_config__ec6108v9_usb() {
 	add_packages_to_image python3 openssh-server iw wpasupplicant exfatprogs dosfstools e2fsprogs
 }
 
-function post_family_tweaks__ec6108v9_runtime() {
+# Apply masks after the framework finishes enabling its default services.
+function post_customize_image__900_ec6108v9_runtime() {
 	local bsp="${SRC}/packages/bsp/ec6108v9"
 	mkdir -p "${SDCARD}/etc/default" "${SDCARD}/etc/systemd/network"
 	ARMBIAN_ROOT="${SDCARD}" python3 "${bsp}/fix-system-config.py"
