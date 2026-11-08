@@ -4,6 +4,12 @@ function add_host_dependencies__ec6108v9_usb() {
 	EXTRA_BUILD_DEPS+=("mtools" "dosfstools")
 }
 
+function extension_finish_config__ec6108v9_output() {
+	# Native main-config.sh resets FINALDEST after processing CLI arguments.
+	FINALDEST="${EC6108_IMAGE_OUTPUT_DIR:-${FINALDEST}}"
+	mkdir -p "${FINALDEST}"
+}
+
 function extension_prepare_config__ec6108v9_usb() {
 	[[ "${BOARD}" == "ec6108v9" ]] || exit_with_error "Unsupported USB installer board" "${BOARD}"
 	add_packages_to_image python3 openssh-server iw wpasupplicant exfatprogs dosfstools e2fsprogs
