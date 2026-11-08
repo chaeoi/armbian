@@ -6,8 +6,9 @@ Huawei EC6108V9 / Hi3798MV100 的 Armbian 社区适配。目标为 **mdmo1d、1 
 仓库通过固定版本的官方 Armbian Build Framework 构建内核、BSP 和 Jammy 最小系统，输出 **`.img.xz` U 盘安装镜像**。
 用 Armbian Imager 将镜像写入 U 盘，再从主板 USB 启动入口安装到内置 eMMC，无需原系统或 SSH。
 
-**状态：社区 TV box / 实验性。** 原 r6 系统已有实机记录；新增官方框架与 USB 导出流程已通过本地主机验证。
-首次 GitHub Actions 全量构建、U 盘启动与完整烧写尚待验证，新包不会自动标记为已上机测试。
+**状态：社区 TV box / 实验性。** 官方框架的完整构建、镜像校验、源码归档和产物上传已在 GitHub Actions 通过。
+U 盘启动与新镜像实机烧写尚待验证；远程试刷停在旧 RAM 维护入口，新包保持未上机认证。
+见 [云端构建与试刷记录](docs/validation/GITHUB-BUILD-20261109.md)。
 
 ## 下载和刷机
 
@@ -68,7 +69,7 @@ packages/blobs/hi3798mv100/              固定摘要的引导参数和已验证
 | 首次启动 | 扩展 ext4、独立 SSH 主机密钥、按 eMMC 身份生成本地 MAC，SD 按固定卡槽自动挂载 |
 | 未启用 | HDMI、音频、GPU、视频解码；温度与动态调频接口尚未提供 |
 
-现有实机仍为 Armbian 26.8.3 / Ubuntu 22.04.5，内核 `7.3.0-rc7-ec6108v9-r6`。
+此前已验证的实机基线为 Armbian 26.8.3 / Ubuntu 22.04.5，内核 `7.3.0-rc7-ec6108v9-r6`。
 新官方框架构建的包拥有独立版本和测试状态，不继承旧镜像的上机认证。
 RC 内核未完成长期老化；同名外壳下的其他 PCB、DDR 或闪存配置不在当前兼容范围内。
 见 [硬件说明](docs/HARDWARE.md)、[测试索引](docs/VALIDATION.md) 与 [救砖说明](docs/RECOVERY.md)。

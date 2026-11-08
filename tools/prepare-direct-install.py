@@ -117,6 +117,8 @@ def stage(directory):
     # SHA256SUMS uses filenames relative to the staging directory.
     assert (directory/'rootfs.tar.gz').is_file()
     root = run('findmnt','-n','-o','SOURCE','/')
+    if root == '/dev/mmcblk0p3':
+        raise RuntimeError('RAM entry from the direct three-partition root is not validated; use the USB installer')
     if root.startswith('/dev/loop'):
         assert str(directory).startswith('/.hinas/var/lib/ec6108-install')
         boot_root = '/.hinas'

@@ -75,6 +75,8 @@ if not a.flash and not a.stage_only:
 ram=remote('test','-e','/etc/ec6108-ram-mode',check=False).returncode==0
 if not ram:
     root=remote('findmnt','-n','-o','SOURCE','/').stdout.decode().strip()
+    if a.flash and root == '/dev/mmcblk0p3':
+        raise RuntimeError('RAM entry from the direct three-partition root is not validated; use the USB installer')
     assert root.startswith('/dev/loop') or root in ('/dev/mmcblk0p3','/dev/mmcblk0p9')
     stage=('/.hinas' if root.startswith('/dev/loop') else '')+'/var/lib/ec6108-install'
     remote('mkdir','-p',stage)

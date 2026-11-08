@@ -1,7 +1,7 @@
 # U 盘安装 Armbian
 
 仅针对已确认的 EC6108V9 / Hi3798MV100 / mdmo1d / 1 GiB RAM / 4 GB eMMC。
-当前 USB 流程通过本地格式与烧写逻辑检查，首次 GitHub Actions 构建及硬件 USB 刷入尚待验证。
+完整 GitHub Actions 构建及镜像校验已通过，硬件 USB 刷入尚待验证，见 [当前记录](validation/GITHUB-BUILD-20261109.md)。
 
 ## 获取产物
 
@@ -60,6 +60,8 @@ Linux 内核与根系统只有一份，底层引导文件不构成第二套海�
 ## 旧私有网络重装包
 
 原开发机 `output/ec6108v9-armbian-r6-single/` 仍是已验证样机的私有备份，不在公开仓库内。
-它包含该设备的身份与无线配置，只支持 root SSH 登录后重装；不作为新的 USB 包输入。
+它包含该设备的身份与无线配置，不作为新的 USB 包输入。
+本次从当前三分区直接根进入旧 RAM 维护环境未恢复网络，此路径已加保护并停止推荐。
+不能将此前从旧布局迁移成功，当作当前三分区网络重装已验证。
 其入口为 `flash.sh`，仅检查使用 `python3 flash.py`。
 维护工具 `tools/build-direct-release.py --private` 也仅服务于这个历史私有包。

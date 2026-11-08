@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 import importlib.util
+import json
 from pathlib import Path
 import struct
 import subprocess
@@ -59,6 +60,26 @@ class BootImageTests(unittest.TestCase):
 
 
 class BuildGuardsTests(unittest.TestCase):
+    def test_direct_root_ram_entry_stops_before_boot_changes(self):
+        installer = load("prepare_direct", "prepare-direct-install.py")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "manifest.json").write_text(json.dumps({"emmc_bytes": 3959422976}))
+            (root / "rootfs.tar.gz").touch()
+
+            def probe(*arguments):
+                return "/dev/mmcblk0p3" if arguments[0] == "findmnt" else "checksums accepted"
+
+            with patch.object(installer, "hardware", return_value="fixture-cid"), \
+                    patch.object(installer, "run", side_effect=probe), \
+                    patch.object(installer, "write_kernel") as kernel_write, \
+                    patch.object(installer, "write_environment") as environment_write, \
+                    patch.object(Path, "write_bytes", side_effect=AssertionError("Unexpected boot-file write")):
+                with self.assertRaisesRegex(RuntimeError, "three-partition"):
+                    installer.stage(root)
+                kernel_write.assert_not_called()
+                environment_write.assert_not_called()
+
     def test_configuration_does_not_silently_drop_nat_or_disabled_display(self):
         build = load("build_kernel", "build-kernel.py")
         with tempfile.TemporaryDirectory() as directory:
