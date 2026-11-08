@@ -71,7 +71,12 @@ def main():
                 "FINALDEST=" + str(PROJECT / "output/images")]
     specified = {argument.split("=", 1)[0] for argument in arguments if "=" in argument}
     defaults = [argument for argument in defaults if argument.split("=", 1)[0] not in specified]
-    os.execv(str(destination / "compile.sh"), [str(destination / "compile.sh"), *arguments, *defaults])
+    environment = os.environ.copy()
+    if arguments[0] in {"config-dump-json", "artifact-config-dump-json"}:
+        # Native CI logging otherwise prefixes stdout with a GitHub ::group:: marker.
+        environment.update(CONFIG_DEFS_ONLY="yes", CI="false")
+    os.execve(str(destination / "compile.sh"),
+              [str(destination / "compile.sh"), *arguments, *defaults], environment)
 
 
 if __name__ == "__main__":

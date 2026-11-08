@@ -74,7 +74,9 @@ jobs:
         with:
           name: ec6108v9-build-logs-${{ github.run_number }}
           if-no-files-found: ignore
-          path: work/armbian-build/output/logs/**
+          path: |
+            work/armbian-build/output/logs/**
+            work/ec6108v9-config.json
 
   publish:
     if: github.event_name == 'workflow_dispatch' && inputs.publish
