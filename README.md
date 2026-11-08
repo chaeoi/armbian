@@ -3,8 +3,8 @@
 [![Build USB image](https://github.com/chaeoi/armbian/actions/workflows/build.yml/badge.svg)](https://github.com/chaeoi/armbian/actions/workflows/build.yml)
 
 Huawei EC6108V9 / Hi3798MV100 的 Armbian 社区适配。目标为 **mdmo1d、1 GiB RAM、4 GB eMMC** 样机。
-仓库通过固定版本的官方 Armbian Build Framework 构建内核、BSP 和 Jammy 最小系统，再导出 **U 盘刷机 ZIP**。
-下载完成后解压到 FAT32 U 盘，从主板 USB 启动入口安装，无需原系统或 SSH。
+仓库通过固定版本的官方 Armbian Build Framework 构建内核、BSP 和 Jammy 最小系统，输出 **`.img.xz` U 盘安装镜像**。
+用 Armbian Imager 将镜像写入 U 盘，再从主板 USB 启动入口安装到内置 eMMC，无需原系统或 SSH。
 
 **状态：社区 TV box / 实验性。** 原 r6 系统已有实机记录；新增官方框架与 USB 导出流程已通过本地主机验证。
 首次 GitHub Actions 全量构建、U 盘启动与完整烧写尚待验证，新包不会自动标记为已上机测试。
@@ -13,20 +13,21 @@ Huawei EC6108V9 / Hi3798MV100 的 Armbian 社区适配。目标为 **mdmo1d、1 
 
 打开 [Build EC6108V9 USB image](https://github.com/chaeoi/armbian/actions/workflows/build.yml)，点击 **Run workflow**。
 成功后从该次运行的 Artifacts 下载产物。勾选 `publish` 可同时创建预发布版本。
-镜像按官方规则命名，例如：
+镜像使用官方框架计算的名称与 `.img.xz` 格式，例如：
 
 ```text
-Armbian-unofficial_26.11.0-trunk_Ec6108v9_jammy_edge_<kernel>_minimal.usb.zip
+Armbian-unofficial_26.11.0-trunk_Ec6108v9_jammy_edge_<kernel>_minimal.img.xz
 ```
 
-1. 校验 ZIP 的 SHA-256，解压到 FAT32 USB 2.0 U 盘根目录。
+1. 校验 `.img.xz.sha`，用 Armbian Imager 的本地镜像入口写入至少 1 GB 的 USB 2.0 U 盘。
 2. 断电，插入 U 盘、接网线，按实际主板短接点进入 USB 启动模式。
 3. USB 启动后放开短接，保持供电，等待写入和自动重启。
 4. 首次启动通过有线 DHCP 获取地址。SSH 初始账号为 `root`，密码为 `1234`，首次登录修改。
 
 安装会删除内置系统及数据，最终只有一个 Armbian。SD 和其他 USB 存储不在烧写目标内。
 短接点尚未经本项目实测，不能只凭外壳型号套用其他 V9/V9C 教程。
-完整步骤、包内文件和验证范围见 [安装指南](docs/INSTALL.md) 与 [USB 构建记录](docs/validation/USB-PIPELINE-20261108.md)。
+镜像是内置系统的安装盘，包含已准备好的 FAT32 分区和烧写文件。
+完整步骤、盘内文件和验证范围见 [安装指南](docs/INSTALL.md) 与 [USB 构建记录](docs/validation/USB-PIPELINE-20261108.md)。
 
 ## 构建
 

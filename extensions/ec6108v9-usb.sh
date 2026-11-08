@@ -1,5 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
+function add_host_dependencies__ec6108v9_usb() {
+	EXTRA_BUILD_DEPS+=("mtools" "dosfstools")
+}
+
 function extension_prepare_config__ec6108v9_usb() {
 	[[ "${BOARD}" == "ec6108v9" ]] || exit_with_error "Unsupported USB installer board" "${BOARD}"
 	add_packages_to_image python3 openssh-server iw wpasupplicant exfatprogs dosfstools e2fsprogs
@@ -97,6 +101,5 @@ function post_build_image__900_ec6108v9_usb() {
 	python3 "${SRC}/packages/bsp/ec6108v9/build-usb.py" \
 		--image "${FINAL_IMAGE_FILE}" --staging "${WORKDIR}/ec6108v9-usb" \
 		--source-root "${SRC}" --output "${DESTIMG}" --version "${version}"
-	# The framework disk is an intermediate filesystem container, not a board boot image.
-	rm -f "${FINAL_IMAGE_FILE}"
+	# The exporter atomically replaces the rootfs container with a FAT32 installer disk.
 }

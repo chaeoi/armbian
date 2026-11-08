@@ -9,7 +9,7 @@ USB 导出、首次启动和稀疏格式工具位于 `packages/bsp/ec6108v9/`。
 | 类别 | 文件 | 运行位置与作用 |
 | --- | --- | --- |
 | 官方框架 | `armbian-build.py` | 主机；获取固定框架并安装板级扩展，`compile.sh build/kernel` 使用此入口 |
-| USB 校验 | `verify-usb.py` | 主机；检查 USB ZIP、环境变量、摘要和稀疏镜像，不访问设备 |
+| USB 校验 | `verify-usb.py` | 主机；检查 `.img.xz` 的分区、FAT32、环境变量、摘要和稀疏镜像，不访问设备 |
 | 构建 | `fetch-kernel.py`, `build-kernel.py`, `package-kernel.py`, `package-modules.py` | 主机；只处理源码和构建目录 |
 | 检查与导出 | `check-repo.py`, `export-port.py`, `port.py`, `uimage.py` | 主机；源码检查及公开适配包 |
 | 用户空间来源 | `fetch-rootfs.py`, `build-bsp.py`, `prepare-wifi-firmware.py` | 主机；保留原固定 rootfs/BSP 来源和固件准备方法，非完整整机镜像流程 |

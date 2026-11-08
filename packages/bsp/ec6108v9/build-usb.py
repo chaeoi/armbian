@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-"""Export an official Armbian image as a Hi3798MV100 USB flashing ZIP."""
+"""Export an official Armbian rootfs as a FAT32 Hi3798MV100 USB installer disk."""
 # SPDX-License-Identifier: GPL-2.0-only
 import argparse
 import hashlib
 import json
 from pathlib import Path
-import shutil
 import struct
 import tempfile
 import uuid
-import zipfile
 import zlib
 
 from sparse import encode, inspect
-from usb_layout import boot_environment, flash_environment
+from usb_disk import create, DISK_LAYOUT
+from usb_layout import boot_environment, flash_environment, flash_positions
 from uimage import validate_image
 
 
@@ -96,22 +95,15 @@ def export(image, staging, output, version, source_root):
         padded("fastboot.bin", loader, 1024 * 1024)
         for name in ("baseparam.img", "pq_param.bin", "logo.img"):
             padded(name, (source_root / bootstrap["files"][name]["path"]).read_bytes(), 4 * 1024 * 1024)
-        root_sectors = (board["emmc_bytes"] - board["layout"]["root_offset"]) // 512
-        positions = {"root": ("rootfs.ext4", board["layout"]["root_offset"] // 512, root_sectors),
-                     "kernel": ("kernel.bin", 0x7000, 0xA000),
-                     "base": ("baseparam.img", 0x1000, 0x2000),
-                     "pq": ("pq_param.bin", 0x3000, 0x2000),
-                     "logo": ("logo.img", 0x5000, 0x2000),
-                     "loader": ("fastboot.bin", 0, 0x800),
-                     "bootargs": ("bootargs.bin", 0x800, 0x80)}
         files = {}
-        for key, (name, sector, sectors) in positions.items():
+        for key, (name, sector, sectors) in flash_positions(board).items():
             sha, crc = digest(payload / name)
             files[key] = {"filename": "mv100/" + name, "sector": sector, "sectors": sectors,
                           "sha256": sha, "crc32": crc, "bytes": (payload / name).stat().st_size,
                           "sparse": key == "root"}
         (package / "bootargs.bin").write_bytes(flash_environment(files))
-        manifest = {"release": version, "image_type": "usb-flash", "board": "ec6108v9",
+        manifest = {"release": version, "image_type": "usb-installer", "disk": DISK_LAYOUT,
+                    "board": "ec6108v9",
                     "profile": "mdmo1d", "emmc_bytes": board["emmc_bytes"],
                     "kernel_release": metadata["kernel_release"], "kernel_bytes": len(kernel),
                     "kernel_sha256": hashlib.sha256(kernel).hexdigest(),
@@ -123,22 +115,18 @@ def export(image, staging, output, version, source_root):
         (package / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
         (package / "README.txt").write_text(
             "EC6108V9 / Hi3798MV100 / mdmo1d / 1 GiB RAM / 4 GB eMMC only.\n"
-            "Extract this ZIP to a FAT32 USB 2.0 drive. Keep fastboot.bin and bootargs.bin at its root.\n"
-            "Power off, connect USB and Ethernet, use the verified board USB-boot short, then power on.\n"
+            "Write the .img.xz image to a USB 2.0 drive using Armbian Imager (local/custom image).\n"
+            "This FAT32 volume is an installer that writes Armbian to internal eMMC.\n"
+            "Power off, connect USB and Ethernet, use the USB-boot short for the actual PCB, then power on.\n"
             "Release the short after USB boot starts. Wait for installation and the automatic reboot.\n"
             "This erases the internal OS. Keep power connected. Remove this USB drive after installation.\n"
             "SSH: root / 1234. Change the password at first login. No Wi-Fi credentials are included.\n"
             "This build has not been boot-tested. Check the repository validation report before flashing.\n")
         names = sorted(path for path in package.rglob("*") if path.is_file())
         (package / "SHA256SUMS").write_text("".join(digest(path)[0] + "  " + path.relative_to(package).as_posix() + "\n" for path in names))
-        destination = output / (version + ".usb.zip")
-        with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
-            for path in sorted(package.rglob("*")):
-                if path.is_file():
-                    archive.write(path, path.relative_to(package).as_posix())
-        checksum = digest(destination)[0]
-        destination.with_name(destination.name + ".sha256").write_text(checksum + "  " + destination.name + "\n")
-        (output / (version + ".usb.manifest.json")).write_text(json.dumps(manifest, indent=2) + "\n")
+        destination = output / (version + ".img")
+        create(package, destination, version)
+        (output / (version + ".manifest.json")).write_text(json.dumps(manifest, indent=2) + "\n")
         print(destination)
         return destination
 

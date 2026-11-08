@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
+import hashlib
 import importlib.util
-import json
-import os
+import lzma
 from pathlib import Path
 import shutil
 import struct
@@ -9,7 +9,6 @@ import subprocess
 import sys
 import tempfile
 import unittest
-import zipfile
 
 PROJECT = Path(__file__).resolve().parents[1]
 BSP = PROJECT / "packages/bsp/ec6108v9"
@@ -23,8 +22,9 @@ def load(name, path):
     return module
 
 
-@unittest.skipUnless(all(shutil.which(name) for name in ("dtc", "fdtget", "mkfs.ext4")),
-                     "Install device-tree-compiler and e2fsprogs for the ext4 export fixture")
+@unittest.skipUnless(all(shutil.which(name) for name in
+                        ("dtc", "fdtget", "mkfs.ext4", "mkfs.fat", "fsck.fat", "mcopy", "mdir")),
+                     "Install device-tree-compiler, e2fsprogs, dosfstools and mtools for the disk fixture")
 class USBExportTests(unittest.TestCase):
     def test_prepare_export_and_verify_without_device_credentials(self):
         prepare = load("prepare_image", BSP / "prepare-image.py")
@@ -61,20 +61,42 @@ class USBExportTests(unittest.TestCase):
                 stream.truncate(64 * 1024 * 1024)
             subprocess.run(["mkfs.ext4", "-q", "-F", "-d", str(root), str(filesystem)], check=True,
                            capture_output=True)
-            image = base / "fixture.img"
+            output.mkdir()
+            image = output / (version + ".img")
             with image.open("wb") as target, filesystem.open("rb") as source:
                 target.seek(34 * 1024 * 1024)
                 shutil.copyfileobj(source, target)
-            archive = exporter.export(image, staging, output, version, PROJECT)
-            manifest = verifier.verify(archive)
+            disk = exporter.export(image, staging, output, version, PROJECT)
+            self.assertEqual(disk, image)
+            self.assertEqual(disk.stat().st_size, 512 * 1024 * 1024)
+            manifest = verifier.verify(disk)
             self.assertFalse(manifest["tested_boot"])
             self.assertFalse(manifest["private_device_configuration"])
             self.assertEqual(manifest["rootfs"]["expanded_bytes"], 64 * 1024 * 1024)
-            self.assertTrue(archive.with_name(archive.name + ".sha256").exists())
-            with zipfile.ZipFile(archive, "a") as package:
-                package.writestr("management-key", "unexpected fixture key")
+            self.assertEqual(manifest["image_type"], "usb-installer")
+            compressed = disk.with_name(disk.name + ".xz")
+            with disk.open("rb") as source, lzma.open(compressed, "wb", preset=0) as target:
+                shutil.copyfileobj(source, target)
+            checksum = compressed.with_name(compressed.name + ".sha")
+            sha = hashlib.sha256(compressed.read_bytes()).hexdigest()
+            checksum.write_text(sha + "  " + compressed.name + "\n")
+            self.assertEqual(verifier.verify(compressed), manifest)
+            checksum.write_text("0" * 64 + "  " + compressed.name + "\n")
+            with self.assertRaisesRegex(ValueError, "image checksum"):
+                verifier.verify(compressed)
+            with disk.open("r+b") as stream:
+                stream.seek(446 + 8)
+                stream.write(struct.pack("<I", 4096))
+            with self.assertRaisesRegex(ValueError, "partition table"):
+                verifier.verify(disk)
+            with disk.open("r+b") as stream:
+                stream.seek(446 + 8)
+                stream.write(struct.pack("<I", 2048))
+            private = base / "management-key"
+            private.write_text("unexpected fixture key")
+            subprocess.run(["mcopy", "-i", str(disk) + "@@1048576", str(private), "::/"], check=True)
             with self.assertRaisesRegex(ValueError, "payload set"):
-                verifier.verify(archive)
+                verifier.verify(disk)
 
 
 if __name__ == "__main__":

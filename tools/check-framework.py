@@ -13,7 +13,8 @@ def verify(path):
     expected = {"ARCH": "armhf", "BOARD_TYPE": "tvb", "BOARDFAMILY": "hi3798mv100",
                 "BOARD_NAME": "Huawei EC6108V9", "BOOTCONFIG": "none", "ROOTFS_TYPE": "ext4",
                 "KERNELSOURCE": SOURCE_INFO["repository"], "KERNELBRANCH": "commit:" + SOURCE_INFO["commit"],
-                "KERNELPATCHDIR": "archive/hi3798mv100-7.3", "OFFSET": "34", "EXTRAWIFI": "no"}
+                "KERNELPATCHDIR": "archive/hi3798mv100-7.3", "OFFSET": "34", "EXTRAWIFI": "no",
+                "SKIP_COMPRESSING": "json"}
     for name, expected_value in expected.items():
         if values.get(name) != expected_value:
             raise ValueError("Unexpected framework setting: " + name)

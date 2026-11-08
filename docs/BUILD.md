@@ -6,7 +6,7 @@
 ## GitHub Actions
 
 工作流为 `.github/workflows/build.yml`。支持手动运行，以及 `main` 上构建相关文件的更新。
-它完成主机测试、官方内核与用户空间构建、USB 导出、ZIP 校验和适配源码归档。
+它完成主机测试、官方内核与用户空间构建、USB 安装盘导出、压缩镜像校验和适配源码归档。
 产物上传到 Artifacts。手动勾选 `publish` 时额外创建预发布版本；普通构建只需仓库读取权限。
 构建失败时保留框架日志。
 
@@ -50,22 +50,34 @@ CONFIG_DEFS_ONLY=yes ./compile.sh config-dump-json BOARD=ec6108v9 BRANCH=edge RE
 目录和扩展接口参考 [官方添加板卡说明](https://docs.armbian.com/build-framework/adding-a-board/)。
 
 新配置不携带旧 `-ec6108v9-r6` 后缀；版本后缀由官方框架统一生成，保持内核、模块与 Debian 包命名一致。
-`check` 的 ext4 集成用例需要 `device-tree-compiler` 和 `e2fsprogs`；缺少时明确显示跳过，Actions 会安装它们。
+`check` 的磁盘集成用例需要 `device-tree-compiler`、`e2fsprogs`、`dosfstools` 和 `mtools`。
+缺少时明确显示跳过；Actions 会安装全部依赖，板级扩展也声明了构建主机的 FAT 工具依赖。
 
 ## 镜像导出
 
 框架先生成标准的中间 ext4 磁盘容器，根分区从 34 MiB 开始。
 扩展验证已安装内核和存储别名，生成追加 DTB 的 legacy uImage，并导出 Android sparse 根文件系统。
-中间磁盘容器没有可直接启动的主板引导，不作为最终 `.img` 分发。最终交付 `.usb.zip`。
+该容器只用于读取已构建的根系统。扩展随后将它替换成真正的 512 MiB USB 安装盘：
+MBR 分区表、从 1 MiB 开始的单一 FAT32 分区，根目录包含 USB 引导和 `mv100/` 烧写文件。
+分区内的所有文件写入后进行只读 FAT 检查。
+这张盘用于安装到 eMMC；盒子的正常 Armbian 根系统安装在 eMMC 中。
 
 根文件系统中的零块编码为 FILL，避免烧写时保留零块位置的旧内容。
 U-Boot 先校验全部文件，再依次写根系统、内核、参数和引导，正式启动环境最后写入。
 内核分区有 20 MiB，但 U-Boot 只读取前 8 MiB；uImage 超过上限会拒绝打包。
 稀疏文件超过 384 MiB RAM 缓冲限制时同样拒绝。
 
-`output/images/` 包含 USB ZIP、整包 SHA-256 和来源清单。
-ZIP 内还有每个烧写文件的 SHA-256，启动脚本包含 CRC 校验。
-输出沿用官方计算的版本名，附加 `.usb`，并保持 `tested_boot=false`，直到有对应镜像的实机证据。
+最终压缩、整盘 SHA-256 和文件整理使用官方框架原有流程，默认 `COMPRESS_OUTPUTIMAGE=sha,xz`。
+`output/images/` 包含 `.img.xz`、`.img.xz.sha`、`.img.txt` 以及 `.manifest.json` 和对应 `.sha`。
+盘内还保留每个烧写文件的 SHA-256，启动脚本包含 CRC 校验。
+来源清单保持 `tested_boot=false`，直到有对应镜像的实机证据。
+
+```sh
+python3 tools/verify-usb.py output/images/*.img.xz
+```
+
+校验工具以只读方式解压镜像，检查 MBR、FAT32、全部文件、启动环境、内核和稀疏根系统。
+它拒绝额外文件、错误写入范围及不一致的来源清单，不访问盒子或主机物理磁盘。
 
 ## 旧 r6 独立工具
 

@@ -14,6 +14,7 @@
 本项目没有实测当前 PCB 的短接点，不给未经确认的 J15/J16 指令。
 普通双公 USB 线不能替代 FAT32 U 盘或 TTL 模块。
 
+先把 `.img.xz` 用 Armbian Imager 写入 U 盘，镜像内已包含 FAT32 分区和恢复所需文件。
 操作见 [安装指南](INSTALL.md)。参考 [原项目 USB 教程](https://www.ecoo.top/docs/tutorial-basics/usb-flash/)
 与 [TTL 方式说明](https://ecoo.top/flashstyle.html)。
 

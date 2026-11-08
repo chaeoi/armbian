@@ -9,6 +9,17 @@ LOAD = "0x1000000"
 SCRATCH, EXPECTED = "0x800000", "0x800004"
 
 
+def flash_positions(board):
+    root = board["layout"]["root_offset"]
+    return {"root": ("rootfs.ext4", root // 512, (board["emmc_bytes"] - root) // 512),
+            "kernel": ("kernel.bin", 0x7000, 0xA000),
+            "base": ("baseparam.img", 0x1000, 0x2000),
+            "pq": ("pq_param.bin", 0x3000, 0x2000),
+            "logo": ("logo.img", 0x5000, 0x2000),
+            "loader": ("fastboot.bin", 0, 0x800),
+            "bootargs": ("bootargs.bin", 0x800, 0x80)}
+
+
 def environment(values):
     payload = b"\0".join(key.encode() + b"=" + value.encode() for key, value in values.items()) + b"\0\0"
     if len(payload) > ENV_SIZE - 4:

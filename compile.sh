@@ -29,7 +29,7 @@ case "${1:-help}" in
 EC6108V9 Armbian community adaptation
 
   ./compile.sh build BOARD=ec6108v9 BRANCH=edge RELEASE=jammy BUILD_MINIMAL=yes
-                          Build the USB flashing ZIP with the official framework
+                          Build the USB installer .img.xz with the official framework
   ./compile.sh prepare-framework
                           Fetch the pinned framework and install the board overlay
   ./compile.sh check       Check sources, documentation and host-tool tests (offline)

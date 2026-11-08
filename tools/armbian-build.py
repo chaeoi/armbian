@@ -66,7 +66,7 @@ def main():
     defaults = ["BOARD=ec6108v9", "BRANCH=edge", "RELEASE=jammy", "BUILD_MINIMAL=yes",
                 "BUILD_DESKTOP=no", "KERNEL_CONFIGURE=no", "EXPERT=yes",
                 "INSTALL_ARMBIAN_FIRMWARE=no", "INSTALL_HEADERS=no", "NETWORKING_STACK=systemd-networkd",
-                "COMPRESS_OUTPUTIMAGE=sha",
+                "COMPRESS_OUTPUTIMAGE=sha,xz",
                 "VENDOR=Armbian-unofficial", "MAINTAINER=canghai0823", "MAINTAINERMAIL=canghai0823@users.noreply.github.com",
                 "FINALDEST=" + str(PROJECT / "output/images")]
     specified = {argument.split("=", 1)[0] for argument in arguments if "=" in argument}

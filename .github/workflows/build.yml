@@ -38,7 +38,7 @@ jobs:
         run: |
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
           sudo apt-get update
-          sudo apt-get install -y git python3 device-tree-compiler
+          sudo apt-get install -y git python3 device-tree-compiler e2fsprogs dosfstools mtools xz-utils
       - name: Check adaptation sources
         run: ./compile.sh check
       - name: Validate the native board configuration
@@ -51,8 +51,8 @@ jobs:
           ./compile.sh build BOARD=ec6108v9 BRANCH=edge RELEASE=jammy \
             BUILD_MINIMAL=yes BUILD_DESKTOP=no KERNEL_CONFIGURE=no \
             KERNEL_GIT=shallow PREFER_DOCKER=no
-      - name: Verify USB flashing package
-        run: python3 tools/verify-usb.py output/images/*.usb.zip
+      - name: Verify USB installer disk image
+        run: python3 tools/verify-usb.py output/images/*.img.xz
       - name: Export corresponding adaptation sources
         run: ./compile.sh source
       - uses: actions/upload-artifact@v7
@@ -61,9 +61,11 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           path: |
-            output/images/*.usb.zip
-            output/images/*.usb.zip.sha256
-            output/images/*.usb.manifest.json
+            output/images/*.img.xz
+            output/images/*.img.xz.sha
+            output/images/*.img.txt
+            output/images/*.manifest.json
+            output/images/*.manifest.json.sha
             output/ec6108v9-armbian-port-source.tar.gz
             output/ec6108v9-armbian-port-source.tar.gz.sha256
       - name: Preserve build logs on failure
@@ -94,7 +96,8 @@ jobs:
         run: |
           cat > release-notes.md <<'NOTES'
           Complete USB installer for EC6108V9 / Hi3798MV100 / mdmo1d / 1 GiB / 4 GB eMMC.
-          Extract the USB ZIP to a FAT32 USB 2.0 drive. Enter the board's USB-boot mode.
+          Write the .img.xz to a USB 2.0 drive using Armbian Imager (local/custom image).
+          Enter the board's USB-boot mode to install Armbian to internal eMMC.
           The installer erases the internal OS and installs one Armbian system.
           Initial SSH login is root / 1234. Change the password on first login.
           This community RC build has not completed a hardware USB-flash test.

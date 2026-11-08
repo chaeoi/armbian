@@ -6,16 +6,21 @@
 ## 获取产物
 
 在 [GitHub Actions](https://github.com/chaeoi/armbian/actions/workflows/build.yml) 手动运行 USB 工作流。
-成功后下载 Artifact；其中 `.usb.zip` 才是最终刷机包，适配源码 `.tar.gz` 不用于刷机。
+成功后下载 Artifact，解开 GitHub 提供的外层归档，取出 `.img.xz` 和 `.img.xz.sha`。
+`.img.xz` 是最终写盘镜像，适配源码 `.tar.gz` 不用于刷机。
 可选的 `publish` 输入会将成功构建发布为预发布版本。
 
 ```sh
-sha256sum -c Armbian-unofficial_*.usb.zip.sha256
-unzip Armbian-unofficial_*.usb.zip -d /你的U盘挂载点
+sha256sum -c Armbian-unofficial_*.img.xz.sha
 ```
 
-U 盘使用 FAT32，建议普通 USB 2.0 闪存盘。不要用写卡工具把这个 ZIP 当作整盘镜像烧进 U 盘。
-根目录应直接看到 `fastboot.bin`、`bootargs.bin` 和 `mv100/`，不能多套一层解压目录。
+使用 [Armbian Imager](https://docs.armbian.com/getting-started/writing-the-image/)：选择本地/自定义镜像，
+选中 `.img.xz`，再选择至少 1 GB 的 USB 2.0 U 盘，写入并等待校验完成。
+写盘会清除 U 盘上的原有数据。无需手工格式化或复制文件，也不要把 `.img.xz` 作为普通文件放进 U 盘。
+
+镜像解压大小为 512 MiB，带 MBR 和一个 FAT32 分区。写好后重新插拔 U 盘，
+根目录应直接看到 `fastboot.bin`、`bootargs.bin` 和 `mv100/`。
+这是给 eMMC 安装系统的 U 盘；仍需按以下步骤进入盒子的 USB 启动模式。
 
 ## 启动与刷入
 
@@ -36,7 +41,7 @@ U 盘使用 FAT32，建议普通 USB 2.0 闪存盘。不要用写卡工具把这
 SD 按已固定的第二个 MMC 卡槽自动挂载到 `/mnt/sdcard`，不按开发者的卡 UUID 固定。
 不包含任何人的 Wi-Fi 配置；先通过有线网络进入系统，再配置无线。
 
-## 包内布局
+## 安装盘布局
 
 | 文件 | 用途 |
 | --- | --- |
