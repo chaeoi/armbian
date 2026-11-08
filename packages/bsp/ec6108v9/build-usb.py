@@ -79,8 +79,10 @@ def export(image, staging, output, version, source_root):
             reader = RootReader(source)
             encode(reader, target)
             original_sha = reader.digest.hexdigest()
-        if (payload / "rootfs.ext4").stat().st_size > bootstrap["max_rootfs_sparse_bytes"]:
-            raise ValueError("Sparse rootfs exceeds the bootloader RAM buffer limit")
+        sparse_bytes = (payload / "rootfs.ext4").stat().st_size
+        if sparse_bytes > bootstrap["max_rootfs_sparse_bytes"]:
+            raise ValueError("Sparse rootfs exceeds the bootloader RAM buffer limit: " +
+                             str(sparse_bytes) + " > " + str(bootstrap["max_rootfs_sparse_bytes"]))
         with (payload / "rootfs.ext4").open("rb") as stream:
             sparse_info = inspect(stream)
         if sparse_info["expanded_bytes"] != root_bytes or sparse_info["expanded_sha256"] != original_sha:
