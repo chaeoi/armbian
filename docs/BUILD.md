@@ -1,97 +1,89 @@
-# 构建 EC6108V9 内核
+# 使用官方 Armbian 框架构建
 
-本仓库是独立的社区适配层，目录参考 Armbian 的板级配置和内核补丁组织方式。
-`compile.sh` 是本项目入口，不是上游 Armbian Build Framework 的同名脚本。
-目前可从干净源码构建内核、DTB 和模块；尚不提供从零生成通用整机 `.img` 的流程。
+本仓库是设备适配层。入口获取固定版本的官方框架，复制标准板级、家族、配置、补丁和扩展后运行其原生构建命令。
+官方框架提交固定在 `config/sources/armbian-build.json`，不是手写替代的 rootfs 构建器。
 
-## 构建环境
+## GitHub Actions
 
-建议在 Ubuntu 24.04 的 x86_64 Linux 主机上构建，Python 3.12 或更新版本。
-下载、编译和打包均不需要 root；只有安装主机依赖需要 sudo：
+工作流为 `.github/workflows/build.yml`。支持手动运行，以及 `main` 上构建相关文件的更新。
+它完成主机测试、官方内核与用户空间构建、USB 导出、ZIP 校验和适配源码归档。
+产物上传到 Artifacts。手动勾选 `publish` 时额外创建预发布版本；普通构建只需仓库读取权限。
+构建失败时保留框架日志。
+
+此流程从公开源码、官方 rootfs 流程和固定引导/固件资产构建，不读取开发机私人目录或设备备份。
+当前首次云端全量构建尚待执行，不能把已提交工作流当作已构建成功。
+
+## 本地入口
+
+建议使用 Ubuntu 24.04 x86_64。完整构建由官方框架准备依赖，需要 root 或可用 sudo。
 
 ```sh
-sudo apt-get update
-sudo apt-get install -y python3 git make gcc gcc-arm-linux-gnueabihf \
-    binutils-arm-linux-gnueabihf bison flex bc libssl-dev libelf-dev patch
 ./compile.sh check
-./compile.sh kernel
+./compile.sh build BOARD=ec6108v9 BRANCH=edge RELEASE=jammy BUILD_MINIMAL=yes BUILD_DESKTOP=no
 ```
 
-默认使用 `arm-linux-gnueabihf-gcc`。可用 `CROSS_COMPILE` 指定其他兼容工具链，
-`HOSTCC` 指定主机编译器，`JOBS=8 ./compile.sh kernel` 调整并行任务数。
+默认框架位于 `work/armbian-build/`，可用 `ARMBIAN_BUILD_DIR` 指定其他目录。
+已经存在但提交不符的目录会被拒绝，不会自动重置或覆盖其历史。
 
-## 固定输入
+```sh
+./compile.sh prepare-framework
+CONFIG_DEFS_ONLY=yes ./compile.sh config-dump-json BOARD=ec6108v9 BRANCH=edge RELEASE=jammy
+./compile.sh kernel BOARD=ec6108v9 BRANCH=edge
+```
 
-- 源码地址、提交、原始归档 SHA-256：`config/sources/linux-hi3798mv100.json`。
-- 设备与启动布局：`config/boards/ec6108v9.json`。
-- `hisi_defconfig` 加 `config/kernel/linux-hi3798mv100.config` 配置片段。
-- `patch/kernel/hi3798mv100/series.json` 决定补丁顺序，并校验修改前后的源码摘要。
-- `dts/hi3798mv100-ec6108v9.dts` 覆盖上游同名板级设备树。
+`kernel` 使用官方框架生成内核 Debian 包。完整 USB 镜像使用 `build` 命令。
+目前只维护 `edge` 的固定 HiSTB 7.3-rc7 源码及 Jammy 最小系统，没有暗示其他发行版或分支已验证。
 
-构建按固定提交下载，不跟随分支最新版本。源码原始导入分支名是 `mv100`；
-以后该分支改名或删除，也不会自动切换到别的内核。
-已有归档会先校验 SHA-256，网络不可用时可使用校验通过的缓存。
-已有源码目录只有在来源记录相符时才会复用，补丁既可首次应用，也可重复验证。
+## 官方布局与固定输入
 
-分步操作：
+- `config/boards/ec6108v9.tvb`：主板、维护者、设备树和家族。
+- `config/sources/families/hi3798mv100.conf`：armhf、内核提交、镜像大小和网络。
+- `config/kernel/linux-hi3798mv100-edge.config`：基于原实机完整配置。
+- `patch/kernel/hi3798mv100/`：USB 时钟、四核定时器、RNG、MMC 的原修复。
+- `patch/kernel/archive/hi3798mv100-7.3/`：注册本机 DTS。准备框架时并入前述四组修复。
+- `extensions/ec6108v9-usb.sh`：用户空间配置、独立设备身份、USB 导出。
+- `packages/blobs/hi3798mv100/`：摘要受保护的 mdmo1d 引导与参数、原实机验证的无线固件。
+
+不再编译其他无线驱动，也不安装全量固件集合。系统只保留当前目标的 RTL8188EU 固件和监管数据库。
+原设备引导备份不参与公开构建；USB 引导取自有固定摘要的公开 mdmo1d 底包，不包含海纳思内核或根系统。
+
+目录和扩展接口参考 [官方添加板卡说明](https://docs.armbian.com/build-framework/adding-a-board/)。
+
+新配置不携带旧 `-ec6108v9-r6` 后缀；版本后缀由官方框架统一生成，保持内核、模块与 Debian 包命名一致。
+`check` 的 ext4 集成用例需要 `device-tree-compiler` 和 `e2fsprogs`；缺少时明确显示跳过，Actions 会安装它们。
+
+## 镜像导出
+
+框架先生成标准的中间 ext4 磁盘容器，根分区从 34 MiB 开始。
+扩展验证已安装内核和存储别名，生成追加 DTB 的 legacy uImage，并导出 Android sparse 根文件系统。
+中间磁盘容器没有可直接启动的主板引导，不作为最终 `.img` 分发。最终交付 `.usb.zip`。
+
+根文件系统中的零块编码为 FILL，避免烧写时保留零块位置的旧内容。
+U-Boot 先校验全部文件，再依次写根系统、内核、参数和引导，正式启动环境最后写入。
+内核分区有 20 MiB，但 U-Boot 只读取前 8 MiB；uImage 超过上限会拒绝打包。
+稀疏文件超过 384 MiB RAM 缓冲限制时同样拒绝。
+
+`output/images/` 包含 USB ZIP、整包 SHA-256 和来源清单。
+ZIP 内还有每个烧写文件的 SHA-256，启动脚本包含 CRC 校验。
+输出沿用官方计算的版本名，附加 `.usb`，并保持 `tested_boot=false`，直到有对应镜像的实机证据。
+
+## 旧 r6 独立工具
+
+早期本机内核流程保留用于追溯和维护已验证镜像：
 
 ```sh
 ./compile.sh fetch
 ./compile.sh prepare
 ./compile.sh configure
-python3 tools/build-kernel.py build
-python3 tools/build-kernel.py modules-install
-python3 tools/package-kernel.py
-python3 tools/package-modules.py
+./compile.sh kernel-local
 ```
 
-## 工作目录与产物
+这些命令只生成旧格式的独立内核、DTB 和模块，不负责新的完整 USB 镜像。
+旧本机可显式使用 `EC6108_USE_BUNDLED_TOOLS=1`，工作目录覆盖仍支持 `EC6108_SOURCE_DIR`、`EC6108_BUILD_DIR`、`EC6108_OUTPUT_DIR`。
 
-默认源码在 `work/histb-linux-source/`，编译目录在 `work/kernel-build/`，产物在 `output/`。
-这些目录均不纳入 Git。可在构建前设置下列变量隔离新构建：
+## 适配源码包
 
-```sh
-export EC6108_SOURCE_DIR=work/new-source
-export EC6108_BUILD_DIR=work/new-build
-export EC6108_OUTPUT_DIR=output/new-kernel
-./compile.sh kernel
-```
-
-不要让新构建覆盖唯一的已验证固件。旧开发环境中手动解压、没有来源记录的源码树不会被自动接管或删除；选择新的源码目录即可。
-原开发机还可显式设置 `EC6108_USE_BUNDLED_TOOLS=1` 使用本地解包工具链；干净检出不依赖它。
-
-输出包含：
-
-| 文件 | 用途 |
-| --- | --- |
-| `uImage-ec6108v9` | legacy uImage 头 + ARM zImage + 追加 DTB |
-| `hi3798mv100-ec6108v9.dtb` | 单独设备树，便于检查 |
-| `kernel.config` | Kconfig 解析后的完整配置 |
-| `kernel-modules.tar` | 当前版本模块，归档为 root 所有者 |
-| `kernel-manifest.json` | 源码提交、补丁、配置摘要、编译器及镜像摘要 |
-| `kernel-modules-manifest.json` | 模块文件摘要 |
-| `kernel-SHA256SUMS` | 以上产物的完整性校验 |
-
-引导程序目前只读取 8 MiB 内核数据，即使内核分区有 20 MiB，也不能构建超过 8 MiB 的 uImage。
-打包器会检查长度、uImage CRC、DTB 长度和 eMMC/SD 编号，避免生成明显不可启动的包。
-
-固定时间戳和归档元数据可减少无关差异；更换编译器或构建环境仍可能改变二进制摘要。
-每次新构建都标记 `tested_boot=false`，编译通过不等于已在盒子上验证。
-
-## 导出适配源码
-
-完成修改后先用 `git add` 暂存要导出的公开文件，再运行 `./compile.sh source`。
-导出器从 Git 索引读取内容，不会读取未暂存的私人配置；输出为
-`output/ec6108v9-armbian-port-source.tar.gz` 及其 SHA-256。
-包内是本仓库适配源码，完整 Linux 源码由其中的固定提交清单另行获取。
-源码包解压后无需 `.git` 也可运行 `./compile.sh check` 和内核构建；再次导出才需要 Git 索引。
-
-## 与上游 Armbian 的关系
-
-现有用户空间使用官方 Armbian armhf Jammy 最小 rootfs 和经裁剪的 CLI BSP。
-`tools/fetch-rootfs.py` 保留了原 rootfs 的固定 OCI 清单；`tools/build-bsp.py` 保留了 BSP 调整方法。
-最终用户空间还经历过设备上的配置、包裁剪和导出，当前不能仅靠上述两步重建整机镜像。
-
-本仓库尚未接入上游 `./compile.sh BOARD=ec6108v9` 的整机镜像流程，也没有声称通过其构建测试。
-未来接入需要实现本机专用引导安装、分区处理和用户空间初始化，不能直接复用其他主板的刷写脚本。
-目录命名参考 [Armbian 用户配置与补丁说明](https://docs.armbian.com/build-framework/user-configurations/)。
+先用 `git add` 暂存公开源码，再运行 `./compile.sh source`。
+导出器从 Git 索引生成 `output/ec6108v9-armbian-port-source.tar.gz`，不读取私人工作目录。
+它包含配置、补丁、扩展及登记过的引导/固件资产；完整 Linux 与官方框架按固定提交获取。
+源码包解压后不依赖 `.git` 即可检查和构建，再次导出才需要 Git 索引。

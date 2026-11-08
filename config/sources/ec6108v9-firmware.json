@@ -1,0 +1,35 @@
+{
+  "source": "Ubuntu linux-firmware and wireless-regdb; exact firmware files validated on the sample device",
+  "packages": [
+    "linux-firmware\t20260319.git217ca6e4.1ubuntu",
+    "wireless-regdb\t2026.05.30-0ubuntu1~26.04.1"
+  ],
+  "files": {
+    "rtlwifi/rtl8188eufw.bin": {
+      "path": "packages/blobs/hi3798mv100/firmware/rtlwifi/rtl8188eufw.bin",
+      "sha256": "2ff74315287529dec2e50eb57d6e0c97d2116f28ae166773ccdf93b6360000c4",
+      "bytes": 15262
+    },
+    "regulatory.db": {
+      "path": "packages/blobs/hi3798mv100/firmware/regulatory.db",
+      "sha256": "2fb33ca0074db573e05ef7dd50bb45b63c0ff98b7e852e1105ebad536fae8e6b",
+      "bytes": 6380
+    },
+    "regulatory.db.p7s": {
+      "path": "packages/blobs/hi3798mv100/firmware/regulatory.db.p7s",
+      "sha256": "c941c08f51c93e46722293b85631604c3740d86c3de0c75f79aef50d2e919179",
+      "bytes": 1085
+    },
+    "LICENCE.rtlwifi_firmware.txt": {
+      "path": "packages/blobs/hi3798mv100/firmware/LICENCE.rtlwifi_firmware.txt",
+      "sha256": "a61351665b4f264f6c631364f85b907d8f8f41f8b369533ef4021765f9f3b62e",
+      "bytes": 2115,
+      "source_url": "https://gitlab.com/kernel-firmware/linux-firmware/-/raw/main/LICENSES/LICENCE.rtlwifi_firmware.txt"
+    },
+    "COPYING.wireless-regdb": {
+      "path": "packages/blobs/hi3798mv100/firmware/COPYING.wireless-regdb",
+      "sha256": "aac5441a2957ad9688be622b5c3e6f73df25b6947159e45bc20752a234ad597f",
+      "bytes": 1356
+    }
+  }
+}

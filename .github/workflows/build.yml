@@ -1,0 +1,105 @@
+name: Build EC6108V9 USB image
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the result as a prerelease
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - config/**
+      - dts/**
+      - extensions/**
+      - packages/**
+      - patch/**
+      - tools/**
+      - compile.sh
+      - .github/workflows/build.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: usb-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Prepare build host
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          sudo apt-get update
+          sudo apt-get install -y git python3 device-tree-compiler
+      - name: Check adaptation sources
+        run: ./compile.sh check
+      - name: Validate the native board configuration
+        run: |
+          mkdir -p work
+          CONFIG_DEFS_ONLY=yes ./compile.sh config-dump-json BOARD=ec6108v9 BRANCH=edge RELEASE=jammy > work/ec6108v9-config.json
+          python3 tools/check-framework.py work/ec6108v9-config.json
+      - name: Build with the official Armbian framework
+        run: |
+          ./compile.sh build BOARD=ec6108v9 BRANCH=edge RELEASE=jammy \
+            BUILD_MINIMAL=yes BUILD_DESKTOP=no KERNEL_CONFIGURE=no \
+            KERNEL_GIT=shallow PREFER_DOCKER=no
+      - name: Verify USB flashing package
+        run: python3 tools/verify-usb.py output/images/*.usb.zip
+      - name: Export corresponding adaptation sources
+        run: ./compile.sh source
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ec6108v9-usb-${{ github.run_number }}
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            output/images/*.usb.zip
+            output/images/*.usb.zip.sha256
+            output/images/*.usb.manifest.json
+            output/ec6108v9-armbian-port-source.tar.gz
+            output/ec6108v9-armbian-port-source.tar.gz.sha256
+      - name: Preserve build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ec6108v9-build-logs-${{ github.run_number }}
+          if-no-files-found: ignore
+          path: work/armbian-build/output/logs/**
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: ec6108v9-usb-${{ github.run_number }}
+          path: release
+      - name: Publish USB image prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BUILD_SHA: ${{ github.sha }}
+          RELEASE_TAG: usb-${{ github.run_number }}-${{ github.run_attempt }}
+        run: |
+          cat > release-notes.md <<'NOTES'
+          Complete USB installer for EC6108V9 / Hi3798MV100 / mdmo1d / 1 GiB / 4 GB eMMC.
+          Extract the USB ZIP to a FAT32 USB 2.0 drive. Enter the board's USB-boot mode.
+          The installer erases the internal OS and installs one Armbian system.
+          Initial SSH login is root / 1234. Change the password on first login.
+          This community RC build has not completed a hardware USB-flash test.
+          Keep the manifest and checksums with the image. Read the repository installation guide.
+          NOTES
+          mapfile -d '' files < <(find release -type f -print0)
+          gh release create "$RELEASE_TAG" "${files[@]}" --target "$BUILD_SHA" \
+            --title "EC6108V9 USB image $RELEASE_TAG" --prerelease --notes-file release-notes.md

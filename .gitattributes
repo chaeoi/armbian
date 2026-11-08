@@ -1,6 +1,10 @@
 * text=auto eol=lf
 *.patch text eol=lf -whitespace
 *.bin binary
+*.img binary
+*.db binary
+*.p7s binary
+packages/blobs/** -whitespace
 *.gz binary
 *.xz binary
 *.zst binary

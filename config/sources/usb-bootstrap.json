@@ -1,0 +1,31 @@
+{
+  "source_url": "https://node4.histb.com:9088/update/system/mv100-mdmo1d-usb-flash.zip",
+  "documentation_url": "https://www.ecoo.top/docs/tutorial-basics/usb-flash/",
+  "archive_sha256": "4dea0eaf395ff8ac45a02afc12b8174290f176593d95cc9ff045501c1541aeea",
+  "soc": "hi3798mv100",
+  "board_profile": "mdmo1d",
+  "reg_name": "hi3798mdmo1d_hi3798mv100_ddr3_2gbyte_8bitx4_4layers_emmc.reg",
+  "max_rootfs_sparse_bytes": 402653184,
+  "files": {
+    "fastboot.bin": {
+      "path": "packages/blobs/hi3798mv100/mdmo1d/fastboot.bin",
+      "sha256": "ee983b033b436b63163bbca4e0e2f087b0aa9637f34307bf16a6a1f278aa3674",
+      "bytes": 539272
+    },
+    "baseparam.img": {
+      "path": "packages/blobs/hi3798mv100/mdmo1d/baseparam.img",
+      "sha256": "92127cfbbf90eee31a4a57cfd6066c855c6ccc35cbb59fccdd79e421b8658c02",
+      "bytes": 5804
+    },
+    "pq_param.bin": {
+      "path": "packages/blobs/hi3798mv100/mdmo1d/pq_param.bin",
+      "sha256": "37ff404ce5d1012a04ab0ea155685b77d60341e6c1f457c60c0af0d22b4fcd12",
+      "bytes": 70888
+    },
+    "logo.img": {
+      "path": "packages/blobs/hi3798mv100/mdmo1d/logo.img",
+      "sha256": "cb1a12a7aadc7cca1c434e4eef8ebfc45857b977474037bd688171631a1928a3",
+      "bytes": 65536
+    }
+  }
+}

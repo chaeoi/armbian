@@ -1,0 +1,13 @@
+# Huawei Hi3798MV100, 1 GiB RAM, mdmo1d, 4 GB eMMC
+# SPDX-License-Identifier: GPL-2.0-only
+BOARD_NAME="Huawei EC6108V9"
+BOARD_VENDOR="huawei"
+BOARDFAMILY="hi3798mv100"
+BOARD_MAINTAINER="chaeoi"
+BOOTCONFIG="none"
+BOOT_FDT_FILE="hisilicon/hi3798mv100-ec6108v9.dtb"
+KERNEL_TARGET="edge"
+KERNEL_TEST_TARGET="edge"
+SERIALCON="ttyAMA0:115200"
+HAS_VIDEO_OUTPUT="no"
+enable_extension "ec6108v9-usb"

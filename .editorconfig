@@ -14,3 +14,6 @@ indent_size = 2
 [*.{dts,patch}]
 indent_style = tab
 trim_trailing_whitespace = false
+
+[packages/blobs/**]
+trim_trailing_whitespace = false

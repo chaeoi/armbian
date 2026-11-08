@@ -1,42 +1,60 @@
-# 安装与重装
+# U 盘安装 Armbian
 
-目前可用的是针对已验证实机的私有网络重装包，另有可公开构建的内核产物。
-内核产物不包含根文件系统、U-Boot 或安装程序，不能作为整盘镜像写入 SD/eMMC。
+仅针对已确认的 EC6108V9 / Hi3798MV100 / mdmo1d / 1 GiB RAM / 4 GB eMMC。
+当前 USB 流程通过本地格式与烧写逻辑检查，首次 GitHub Actions 构建及硬件 USB 刷入尚待验证。
 
-## 私有网络重装
+## 获取产物
 
-开发机现有私有包在 `output/ec6108v9-armbian-r6-single/`；该目录不在公开仓库中。
-它包含设备登录身份、SSH 主机密钥、root 登录配置和 Wi-Fi 配置，仅适合作为本机私有备份。
-其他用户克隆本仓库不会得到这些文件，也没有共享的默认登录密码或私钥。
-
-前提：目标为本项目验证的 EC6108V9 / Hi3798MV100 / mdmo1d / 1 GiB RAM / 4 GB eMMC，
-仍能通过 SSH 以 root 登录，并通过安装器的硬件、容量及引导位置检查。
-
-只检查：
+在 [GitHub Actions](https://github.com/chaeoi/armbian/actions/workflows/build.yml) 手动运行 USB 工作流。
+成功后下载 Artifact；其中 `.usb.zip` 才是最终刷机包，适配源码 `.tar.gz` 不用于刷机。
+可选的 `publish` 输入会将成功构建发布为预发布版本。
 
 ```sh
-python3 output/ec6108v9-armbian-r6-single/flash.py
+sha256sum -c Armbian-unofficial_*.usb.zip.sha256
+unzip Armbian-unofficial_*.usb.zip -d /你的U盘挂载点
 ```
 
-确认使用本机私有包后执行重装：
+U 盘使用 FAT32，建议普通 USB 2.0 闪存盘。不要用写卡工具把这个 ZIP 当作整盘镜像烧进 U 盘。
+根目录应直接看到 `fastboot.bin`、`bootargs.bin` 和 `mv100/`，不能多套一层解压目录。
 
-```sh
-output/ec6108v9-armbian-r6-single/flash.sh
-```
+## 启动与刷入
 
-重装会删除内置系统区及其中的数据。安装器进入临时 RAM 系统，重建 eMMC 根文件系统，
-安装内核并校验后才提交启动环境；最终只保留一个 Armbian。USB 和 SD 不是刷写目标。
-首次准备 RAM 系统实测约四分钟，等待上限十分钟。具体连接参数见包内 README。
+1. 关闭盒子电源，插入 U 盘，接网线到路由器 LAN。
+2. 按实际 PCB 的 USB 启动短接点进入芯片 USB 启动模式，再上电。
+3. USB 启动开始后放开短接。保持供电，等待写入和自动重启。
+4. 正常启动后在路由器查找 DHCP 地址，用 SSH 登录。
 
-## 维护现有私有包
+本项目尚未实测这块主板的短接位置，不能将外壳 V9/V9C 型号当作点位证据。
+原始参考见 [海纳思 USB 启动教程](https://www.ecoo.top/docs/tutorial-basics/usb-flash/)。
+无需盒子原系统能启动，也无需预先 SSH 登录。不使用电脑双公 USB 线。
+刷写本身不需要网络；网线用于安装完成后的首次登录。
+刷写会清除内置系统数据，安装一个 Armbian；SD 和其他 USB 盘不是目标。
+实际写入时间取决于 U 盘和 eMMC，不能按固定秒数断电。
 
-`tools/build-direct-release.py` 只负责组装已有私有 rootfs，不会从零创建用户空间。
-它要求显式传入 `--private`，默认不会导出设备身份。SD UUID 不再写死；需要自动挂载时传 `--sd-uuid`。
-内核来源清单必须已有真实的启动验证记录；尚未上机的新构建会被拒绝，不能直接覆盖私有重装包。
-此工具会改写本地私有包，维护者应先保存已验证副本，并检查所用内核的构建和实机测试记录。
-新的公开内核构建不会自动替换私有刷机包中的已验证内核。
+首次 SSH：`root` / `1234`，按官方首次登录流程修改密码。
+系统首次启动会扩展 ext4，并生成独立 SSH 主机密钥和本地 MAC。
+SD 按已固定的第二个 MMC 卡槽自动挂载到 `/mnt/sdcard`，不按开发者的卡 UUID 固定。
+不包含任何人的 Wi-Fi 配置；先通过有线网络进入系统，再配置无线。
 
-## 无法启动时
+## 包内布局
 
-如果 Linux/SSH 已不可用，网络安装器无法救砖。需要先从串口或芯片 USB 启动路径进入救援环境。
-目前没有经本机实测的离线 Armbian 救砖包，详见 [救砖说明](RECOVERY.md)。
+| 文件 | 用途 |
+| --- | --- |
+| 根目录 `fastboot.bin` | mdmo1d 芯片 USB 启动引导 |
+| 根目录 `bootargs.bin` | 校验及烧写指令 |
+| `mv100/fastboot.bin` | 写入 eMMC 的引导程序 |
+| `mv100/bootargs.bin` | 安装完成后的唯一 Armbian 启动参数 |
+| `mv100/kernel.bin` | uImage 与内核分区填充 |
+| `mv100/rootfs.ext4` | Android sparse 格式的完整根文件系统 |
+| 其余参数文件 | 匹配引导使用的板级显示参数 |
+| `manifest.json` / `SHA256SUMS` | 来源、测试状态及文件校验 |
+
+不是把旧私有 rootfs 改名分发。内核、BSP 和用户空间来自官方构建流程，SSH 身份在目标首次启动时生成。
+Linux 内核与根系统只有一份，底层引导文件不构成第二套海纳思系统。
+
+## 旧私有网络重装包
+
+原开发机 `output/ec6108v9-armbian-r6-single/` 仍是已验证样机的私有备份，不在公开仓库内。
+它包含该设备的身份与无线配置，只支持 root SSH 登录后重装；不作为新的 USB 包输入。
+其入口为 `flash.sh`，仅检查使用 `python3 flash.py`。
+维护工具 `tools/build-direct-release.py --private` 也仅服务于这个历史私有包。

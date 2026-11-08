@@ -1,24 +1,22 @@
-# EC6108V9 救砖范围
+# USB 恢复入口
 
-| 状态 | 恢复入口 | 当前包能否直接使用 |
-| --- | --- | --- |
-| 仍可 root SSH 登录 | 私有网络重装包 | 可以，先运行只读检查 |
-| Linux 不启动，但 U-Boot 可用 | TTL 控制台、USB/TFTP 加载救援系统 | 需要另备救援启动文件 |
-| eMMC 引导损坏 | 芯片 USB 介质启动，或 TTL + HiTool | 当前网络包不能独立完成 |
+新增的 USB 构建流程使用芯片 USB 启动模式，可在原系统或 eMMC 引导不可用时进入烧写。
+它写入匹配 mdmo1d 的引导、内核和完整 Armbian 根系统，不要求先恢复海纳思。
+当前只完成本地格式、校验和烧写逻辑验证；实际 USB 启动与完整恢复还需上机确认。
 
-原引导备份确认本机板级配置是 **Hi3798MV100 / mdmo1d**。
-同名外壳可能包含不同主板，不能把其他 EC6108V9/V9C 的引导文件、DDR 参数或短接点直接套用。
-当前分区从 34 MiB 开始放根系统，与很多安卓或 HiNAS XML 布局不同。
+| 当前状态 | 可用入口 |
+| --- | --- |
+| 原系统正常 | 使用同一个 USB 包，或原开发机的私有 SSH 重装包 |
+| Linux 不启动 / SSH 不可用 | 主板 USB 启动短接，使用 USB 包 |
+| eMMC 引导损坏 | 芯片 USB 启动入口，或 TTL + HiTool |
 
-海纳思项目提供了 [FAT16/FAT32 U 盘短接启动教程](https://www.ecoo.top/docs/tutorial-basics/usb-flash/)
-和 [TTL + HiTool 方式说明](https://ecoo.top/flashstyle.html)。
-这些是已有的救援路径；本项目尚未实测这块主板的短接位置、串口烧写或离线恢复全过程。
-普通双公 USB 线不能替代 USB 转 TTL 模块。
+板级配置为 `Hi3798MV100 / mdmo1d`。同名外壳可能装入其他 PCB，不可混用其他 REG/DDR 包。
+本项目没有实测当前 PCB 的短接点，不给未经确认的 J15/J16 指令。
+普通双公 USB 线不能替代 FAT32 U 盘或 TTL 模块。
 
-一条可研究使用的中间恢复路径是：使用匹配主板的救砖底包恢复到可 root SSH 登录，
-再运行本项目网络安装器检查硬件和布局，通过后重装单一 Armbian。
-这不意味着任意海纳思底包均已验证与本安装器兼容。
+操作见 [安装指南](INSTALL.md)。参考 [原项目 USB 教程](https://www.ecoo.top/docs/tutorial-basics/usb-flash/)
+与 [TTL 方式说明](https://ecoo.top/flashstyle.html)。
 
-`rootfs.tar.gz` 是文件归档，不是可按扇区烧写的 ext4 镜像。
-当前 `uImage` 和 rootfs 可以用作制作离线救援包的材料，但还缺匹配的 USB 启动引导、救援 RAM 系统及写入脚本。
-目前不能仅把网络重装包复制到 U 盘就当作救砖包，也不能把原分区备份直接改名为 `fastboot.bin` 并认定可用。
+根目录的 `fastboot.bin` 是专门的芯片启动引导，不是任意分区备份改名。
+`rootfs.ext4` 是对应 U-Boot 写入器支持的 Android sparse 文件，不是 gzip 归档。
+不要将原网络重装包的 `rootfs.tar.gz` 直接当作 USB 根文件系统。

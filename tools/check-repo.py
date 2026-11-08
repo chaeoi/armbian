@@ -2,6 +2,7 @@
 """Offline validation of the public adaptation tree; never contacts the box."""
 # SPDX-License-Identifier: GPL-2.0-only
 import ast
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -10,7 +11,7 @@ import urllib.parse
 
 from port import BOARD, PROJECT, SOURCE_INFO, git
 
-PUBLIC_DIRECTORIES = {"config", "dts", "patch", "docs", "tools", "tests", ".github"}
+PUBLIC_DIRECTORIES = {"config", "dts", "patch", "docs", "tools", "tests", ".github", "extensions", "packages"}
 PUBLIC_FILES = {"README.md", "LICENSE", "NOTICE.md", "CONTRIBUTING.md", "CHANGELOG.md",
                 "compile.sh", ".gitignore", ".gitattributes", ".editorconfig"}
 
@@ -22,13 +23,32 @@ def validate_public_path(name):
     if name not in PUBLIC_FILES and path.parts[0] not in PUBLIC_DIRECTORIES:
         raise ValueError("Unexpected file in publication set: " + name)
     if any(part == "__pycache__" for part in path.parts) or path.suffix in {
-            ".pyc", ".bin", ".tar", ".gz", ".deb", ".img", ".pem", ".key"}:
+            ".pyc", ".tar", ".gz", ".deb", ".pem", ".key"}:
         raise ValueError("Private/generated file in publication set: " + name)
+    if path.suffix in {".bin", ".img"} and name not in public_blobs():
+        raise ValueError("Unregistered binary in publication set: " + name)
     if path.name in {"connection.json", "known_hosts", "management-key", "authorized_keys"}:
         raise ValueError("Device identity in publication set: " + name)
 
 
+def public_blobs():
+    result = {}
+    for name in ("usb-bootstrap.json", "ec6108v9-firmware.json"):
+        path = PROJECT / "config/sources" / name
+        if path.is_file():
+            for item in json.loads(path.read_text())["files"].values():
+                if not item["path"].startswith("packages/blobs/hi3798mv100/"):
+                    raise ValueError("Boot asset outside the board blob directory")
+                result[item["path"]] = item
+    return result
+
+
 def validate_public_content(name, data):
+    if name in public_blobs():
+        item = public_blobs()[name]
+        if len(data) != item["bytes"] or hashlib.sha256(data).hexdigest() != item["sha256"]:
+            raise ValueError("Public board blob differs from its pinned manifest: " + name)
+        return
     text = data.decode("utf-8")
     if re.search(r"-----BEGIN (?:OPENSSH |RSA |EC )?PRIVATE KEY-----", text):
         raise ValueError("Private key in " + name)
@@ -46,6 +66,7 @@ def main():
                      for directory in PUBLIC_DIRECTORIES
                      for path in (PROJECT / directory).rglob("*")
                      if path.is_file() and "__pycache__" not in path.parts)
+    names = {name for name in names if (PROJECT / name).exists() or (PROJECT / name).is_symlink()}
     if not names:
         raise RuntimeError("No public source files found")
     for name in sorted(names):
@@ -59,7 +80,7 @@ def main():
             ast.parse(data, filename=name)
         elif path.suffix == ".json":
             json.loads(data)
-        elif path.suffix == ".sh":
+        elif path.suffix in {".sh", ".tvb", ".conf"}:
             subprocess.run(["bash", "-n", str(path)], check=True)
         elif path.suffix == ".md":
             for target in re.findall(r"(?<!!)\[[^\]]+\]\(([^)]+)\)", data.decode()):

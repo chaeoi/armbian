@@ -1,0 +1,83 @@
+--- a/arch/arm/boot/dts/hisilicon/Makefile
++++ b/arch/arm/boot/dts/hisilicon/Makefile
+@@ -7,7 +7,8 @@
+ 	hip04-d01.dtb
+ dtb-$(CONFIG_ARCH_HISI) += \
+ 	hi3519-demb.dtb \
+-	hi3798mv100-ec6108v9c.dtb
++	hi3798mv100-ec6108v9c.dtb \
++	hi3798mv100-ec6108v9.dtb
+ dtb-$(CONFIG_ARCH_HIX5HD2) += \
+ 	hisi-x5hd2-dkb.dtb
+ dtb-$(CONFIG_ARCH_SD5203) += \
+--- /dev/null
++++ b/arch/arm/boot/dts/hisilicon/hi3798mv100-ec6108v9.dts
+@@ -0,0 +1,68 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/* EC6108V9 server bring-up, based on the community EC6108V9C board. */
++#include "hi3798mv100-ec6108v9c.dts"
++
++/ {
++	model = "Huawei EC6108V9";
++	compatible = "hisilicon,hi3798mv100-ec6108v9",
++		     "hisilicon,hi3798mv100";
++
++	/* Keep the root eMMC index independent of asynchronous probe order. */
++	aliases {
++		mmc0 = &emmc;
++		mmc1 = &sd;
++	};
++};
++
++/* MV100 exposes all four SD data lines. Keep the default-speed clock. */
++&sd {
++	bus-width = <4>;
++	max-frequency = <25000000>;
++	status = "okay";
++};
++
++/* The vendor DT exposes the second storage port through this xHCI host. */
++&apb {
++	xhci_ec6108v9: usb@98a0000 {
++		compatible = "generic-xhci";
++		reg = <0x98a0000 0x10000>;
++		interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
++		clocks = <&crg HI3798MV100_USB3_BUS_CLK>;
++		clock-names = "clk";
++		status = "okay";
++	};
++};
++
++&eth0 {
++	local-mac-address = [00 11 22 33 44 55];
++	mac-address = [00 11 22 33 44 55];
++};
++
++&phy1 {
++	mac-address = [00 11 22 33 44 55];
++};
++
++&media_cma {
++	size = <0x01000000>;
++};
++
++/* Validate CPU, storage, Ethernet and USB before enabling the display path. */
++&vdp { status = "disabled"; };
++&hdmi { status = "disabled"; };
++&vdec { status = "disabled"; };
++&gpu { status = "disabled"; };
++&aiao { status = "disabled"; };
++
++/* MV100 exposes a dedicated timer SPI for each CPU; the generic shared
++ * SP804 event device cannot supply local high-resolution ticks under SMP.
++ */
++&timer1 {
++	compatible = "hisilicon,hi3798mv100-timer";
++	reg = <0x8a29000 0x20>, <0x8a2a000 0x20>, <0x8a2a020 0x20>,
++	      <0x8a2b000 0x20>, <0x8a2b020 0x20>;
++	interrupts = <GIC_SPI 26 IRQ_TYPE_LEVEL_HIGH>,
++		     <GIC_SPI 59 IRQ_TYPE_LEVEL_HIGH>,
++		     <GIC_SPI 27 IRQ_TYPE_LEVEL_HIGH>,
++		     <GIC_SPI 60 IRQ_TYPE_LEVEL_HIGH>;
++	status = "okay";
++};
