@@ -1,0 +1,54 @@
+[
+  {
+    "file": "drivers/clk/hisilicon/crg-hi3798mv100.c",
+    "patch": "0001-hi3798mv100-usb3-init.patch",
+    "original_sha256": "30369b00ccdf55420d9611ebabeeb66662e5cf90ccac992d7f269d6baee73352",
+    "patched_sha256": "4cbda1c444ac5aa6a708aef9ca7166315f664890d7339203fbaba96f911e2bf6"
+  },
+  {
+    "patch": "0002-hi3798mv100-percpu-timers.patch",
+    "files": [
+      {
+        "file": "drivers/clocksource/timer-hi3798mv100.c",
+        "original_sha256": null,
+        "patched_sha256": "3fde4004e12f614e2df2df5ebab3d0597d6ba27f0dc00166ef88ac737949f459"
+      },
+      {
+        "file": "drivers/clocksource/Makefile",
+        "original_sha256": "8d0f7ba9a33734eef5456f5166f24358dc6948e119bc1f178c722bd383dc9522",
+        "patched_sha256": "82fa590934427abe36f61f48eba5bbbbafcbfc22be361bb17365a8acbd6f2258"
+      },
+      {
+        "file": "drivers/clocksource/Kconfig",
+        "original_sha256": "353c5e5280d5b82b7ece8ec77fdd39a86f97bda98f8bc7200a1551102ac11e06",
+        "patched_sha256": "00f858e54566706ae29bb021dfea107cb7de9d0a4b8ca1a32555c4ddb2a183a5"
+      },
+      {
+        "file": "include/linux/cpuhotplug.h",
+        "original_sha256": "1deb4b1508d7fdffd5e64d99a55b4b568ab40aa73cb14bfd79d7bfbbaf8f3f29",
+        "patched_sha256": "fc30a9ed6fd7c82bb64fb1a46c431c5df246f9507a50421be96d197bf0722705"
+      }
+    ]
+  },
+  {
+    "patch": "0003-histb-rng-valid-short-reads.patch",
+    "file": "drivers/char/hw_random/histb-rng.c",
+    "original_sha256": "9660a97cde446bfd87230b3feb5f2afa7a3467807902d30175ca4a75995004db",
+    "patched_sha256": "902153fbb65d2bfb2dc53119fa06ac0205901ff555e7a2a9758f6dbf3cddf4e6"
+  },
+  {
+    "patch": "0004-mmc-report-recovered-errors.patch",
+    "files": [
+      {
+        "file": "drivers/mmc/host/dw_mmc.c",
+        "original_sha256": "e0223604948c14577d1344a55fd9def37af6bf78cd7d837f343218dfed73b792",
+        "patched_sha256": "96bff4ae25bc06252ce93300bbe8bc0c14375611d46d7a30a89de33cd69f27c3"
+      },
+      {
+        "file": "drivers/mmc/core/block.c",
+        "original_sha256": "a571e9fb1ddd0ef2d330c516b9ea809e33efc673f999c05614e4c142c27accee",
+        "patched_sha256": "5afb4e122376762ca3870a431b8a0b222b570c56c1784eea257ba1bd50504fc1"
+      }
+    ]
+  }
+]

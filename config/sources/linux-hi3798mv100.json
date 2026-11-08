@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/histb-mainline/linux",
+  "branch_at_import": "mv100",
+  "commit": "e92ca2afc9bcb365616ff780af29c9dcaf5f2d38",
+  "archive_url": "https://codeload.github.com/histb-mainline/linux/tar.gz/e92ca2afc9bcb365616ff780af29c9dcaf5f2d38",
+  "archive_sha256": "c432f418b7ac1b98f585bc9a7035a1474225721c35ce332b97e59ad25f5a9d5c",
+  "kernel_release": "7.3.0-rc7-ec6108v9-r6",
+  "source_date_epoch": 1794009600
+}

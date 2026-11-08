@@ -1,0 +1,17 @@
+--- a/drivers/char/hw_random/histb-rng.c
++++ b/drivers/char/hw_random/histb-rng.c
+@@ -66,9 +66,11 @@
+ 			if (!wait)
+ 				return i;
+ 			if (histb_rng_wait(base)) {
+-				pr_err("failed to generate random number, generated %d\n",
+-				       i);
+-				return i ? i : -ETIMEDOUT;
++				/* A positive short read is valid in the hwrng API. */
++				if (i)
++					return i;
++				pr_err_ratelimited("histb-rng: random number generation timed out\n");
++				return -ETIMEDOUT;
+ 			}
+ 		}
+ 		*(u32 *) (data + i) = readl_relaxed(base + RNG_NUMBER);

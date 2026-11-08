@@ -1,0 +1,35 @@
+name: Build EC6108V9 kernel
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  kernel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install cross compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make gcc gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf bison flex bc libssl-dev libelf-dev patch
+      - run: ./compile.sh check
+      - run: ./compile.sh kernel
+      - name: Export corresponding adaptation sources
+        run: ./compile.sh source
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ec6108v9-kernel-not-hardware-tested
+          if-no-files-found: error
+          path: |
+            output/uImage-ec6108v9
+            output/hi3798mv100-ec6108v9.dtb
+            output/kernel.config
+            output/kernel-manifest.json
+            output/kernel-modules.tar
+            output/kernel-modules-manifest.json
+            output/kernel-SHA256SUMS
+            output/ec6108v9-armbian-port-source.tar.gz
+            output/ec6108v9-armbian-port-source.tar.gz.sha256

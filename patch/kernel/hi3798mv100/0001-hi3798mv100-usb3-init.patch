@@ -1,0 +1,137 @@
+--- a/drivers/clk/hisilicon/crg-hi3798mv100.c
++++ b/drivers/clk/hisilicon/crg-hi3798mv100.c
+@@ -8,6 +8,8 @@
+ #include <dt-bindings/clock/hisilicon,hi3798mv100-crg.h>
+ #include <dt-bindings/clock/hisilicon,hi3798mv100-sysctrl.h>
+ #include <linux/clk-provider.h>
++#include <linux/delay.h>
++#include <linux/io.h>
+ #include <linux/mod_devicetable.h>
+ #include <linux/module.h>
+ #include <linux/of.h>
+@@ -357,6 +359,104 @@
+ 	const char	*parent_names[];
+ };
+ 
++struct hi3798mv100_usb3_clk {
++	struct clk_hw hw;
++	void __iomem *crg;
++	void __iomem *perictrl;
++	void __iomem *xhci;
++};
++
++#define to_hi3798mv100_usb3_clk(_hw) \
++	container_of(_hw, struct hi3798mv100_usb3_clk, hw)
++
++static int hi3798mv100_usb3_prepare(struct clk_hw *hw)
++{
++	struct hi3798mv100_usb3_clk *clk = to_hi3798mv100_usb3_clk(hw);
++	u32 val;
++
++	val = readl(clk->perictrl + 0x8);
++	writel(val & ~BIT(26), clk->perictrl + 0x8);
++
++	/* Match the MV100 firmware sequence: enable PHY/host clocks before
++	 * releasing their resets and configuring the Synopsys controller.
++	 */
++	writel(0x431, clk->crg + 0x194);
++	writel(0x13ff, clk->crg + 0xb0);
++	mdelay(5);
++	val = readl(clk->crg + 0xb0);
++	writel(val & ~BIT(12), clk->crg + 0xb0);
++	mdelay(5);
++
++	val = readl(clk->xhci + 0xc2c0);
++	writel(val | BIT(31), clk->xhci + 0xc2c0);
++	val = readl(clk->xhci + 0xc200);
++	writel(val & ~(BIT(4) | BIT(3)), clk->xhci + 0xc200);
++	mdelay(1);
++	val = readl(clk->xhci + 0xc110);
++	val = (val & ~(0x3 << 12)) | (0x1 << 12);
++	writel(val, clk->xhci + 0xc110);
++
++	val = readl(clk->crg + 0x194);
++	writel(val & ~BIT(4), clk->crg + 0x194);
++	mdelay(5);
++	val = readl(clk->crg + 0x194);
++	writel(val & ~BIT(5), clk->crg + 0x194);
++	mdelay(5);
++
++	val = readl(clk->xhci + 0xc2c0);
++	writel(val & ~(BIT(17) | BIT(31)), clk->xhci + 0xc2c0);
++	writel(0x23100000, clk->xhci + 0xc108);
++	writel(0x23180000, clk->xhci + 0xc10c);
++	writel(0x7381560d, clk->perictrl + 0x138);
++
++	return 0;
++}
++
++static int hi3798mv100_usb3_is_prepared(struct clk_hw *hw)
++{
++	struct hi3798mv100_usb3_clk *clk = to_hi3798mv100_usb3_clk(hw);
++
++	return !!(readl(clk->crg + 0xb0) & BIT(0));
++}
++
++static const struct clk_ops hi3798mv100_usb3_clk_ops = {
++	.prepare = hi3798mv100_usb3_prepare,
++	.is_prepared = hi3798mv100_usb3_is_prepared,
++};
++
++static struct clk *hi3798mv100_register_usb3_clk(struct device *dev,
++						 struct hisi_clock_data *clk_data)
++{
++	static const char *const parents[] = { "clk_ahb" };
++	struct hi3798mv100_usb3_clk *usb3;
++	struct clk_init_data init = {
++		.name = "clk_u3",
++		.ops = &hi3798mv100_usb3_clk_ops,
++		.parent_names = parents,
++		.num_parents = ARRAY_SIZE(parents),
++		.flags = CLK_SET_RATE_PARENT,
++	};
++	struct clk *clk;
++
++	usb3 = devm_kzalloc(dev, sizeof(*usb3), GFP_KERNEL);
++	if (!usb3)
++		return ERR_PTR(-ENOMEM);
++
++	usb3->crg = clk_data->base;
++	usb3->perictrl = devm_ioremap(dev, 0xf8a20000, 0x1000);
++	usb3->xhci = devm_ioremap(dev, 0xf98a0000, 0x10000);
++	if (!usb3->perictrl || !usb3->xhci)
++		return ERR_PTR(-ENOMEM);
++
++	usb3->hw.init = &init;
++	clk = devm_clk_register(dev, &usb3->hw);
++	if (IS_ERR(clk))
++		return clk;
++
++	clk_data->clk_data.clks[HI3798MV100_USB3_BUS_CLK] = clk;
++	return clk;
++}
++
+ #define to_hi3798_clk_bits(_hw) \
+ 	container_of(_hw, struct hi3798_clk_bits, hw)
+ 
+@@ -528,6 +628,7 @@
+ 	struct device *dev = &pdev->dev;
+ 	struct hisi_clock_data *clk_data;
+ 	struct clk *hd_pix;
++	struct clk *usb3_clk;
+ 	int ret;
+ 
+ 	clk_data = hisi_clk_alloc(pdev, HI3798MV100_CRG_NR_CLKS);
+@@ -565,6 +666,12 @@
+ 				     clk_data);
+ 	if (ret)
+ 		goto err_mux;
++
++	usb3_clk = hi3798mv100_register_usb3_clk(dev, clk_data);
++	if (IS_ERR(usb3_clk)) {
++		ret = PTR_ERR(usb3_clk);
++		goto err_gate;
++	}
+ 
+ 	ret = hi3798_clk_register_bits(dev, hi3798mv100_bits_clks,
+ 				       ARRAY_SIZE(hi3798mv100_bits_clks),

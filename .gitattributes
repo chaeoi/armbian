@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.patch text eol=lf -whitespace
+*.bin binary
+*.gz binary
+*.xz binary
+*.zst binary

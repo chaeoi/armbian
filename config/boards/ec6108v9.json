@@ -1,0 +1,30 @@
+{
+  "board": "ec6108v9",
+  "name": "Huawei EC6108V9",
+  "support": "community-experimental",
+  "soc": "Hi3798MV100",
+  "architecture": "arm",
+  "debian_architecture": "armhf",
+  "memory_mib": 1024,
+  "emmc_bytes": 3959422976,
+  "boot_configuration": "mdmo1d",
+  "kernel_source": "config/sources/linux-hi3798mv100.json",
+  "kernel_config": "config/kernel/linux-hi3798mv100.config",
+  "patch_series": "patch/kernel/hi3798mv100/series.json",
+  "dts": "dts/hi3798mv100-ec6108v9.dts",
+  "dtb_target": "hisilicon/hi3798mv100-ec6108v9.dtb",
+  "kernel_defconfig": "hisi_defconfig",
+  "kernel_load_address": 33554432,
+  "kernel_read_bytes": 8388608,
+  "layout": {
+    "description": "Bootloader-defined partitions; not an MBR/GPT disk image",
+    "boot_bytes": 14680064,
+    "environment_offset": 1048576,
+    "environment_crc_bytes": 65536,
+    "kernel_offset": 14680064,
+    "kernel_partition_bytes": 20971520,
+    "root_offset": 35651584,
+    "root_partition": "/dev/mmcblk0p3",
+    "blkdevparts": "mmcblk0:14M(boot),20M(kernel),-(armbian-root)"
+  }
+}

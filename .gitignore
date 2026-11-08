@@ -1,0 +1,12 @@
+/artifacts/
+/downloads/
+/work/
+/output/
+/local/
+__pycache__/
+*.py[cod]
+*.part
+.venv/
+.idea/
+.vscode/
+.DS_Store

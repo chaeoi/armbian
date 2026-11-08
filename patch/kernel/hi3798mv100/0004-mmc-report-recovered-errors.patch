@@ -1,0 +1,93 @@
+--- a/drivers/mmc/host/dw_mmc.c
++++ b/drivers/mmc/host/dw_mmc.c
+@@ -1764,6 +1764,27 @@
+ 	else
+ 		host->state = STATE_IDLE;
+ 
++	/* Keep the generic debugfs counters meaningful for recovered errors too. */
++	{
++		struct mmc_command *commands[] = { mrq->sbc, mrq->cmd, mrq->stop };
++		unsigned int i;
++
++		for (i = 0; i < ARRAY_SIZE(commands); i++) {
++			if (!commands[i])
++				continue;
++			if (commands[i]->error == -ETIMEDOUT)
++				mmc_debugfs_err_stats_inc(prev_mmc, MMC_ERR_CMD_TIMEOUT);
++			else if (commands[i]->error == -EILSEQ)
++				mmc_debugfs_err_stats_inc(prev_mmc, MMC_ERR_CMD_CRC);
++		}
++		if (mrq->data) {
++			if (mrq->data->error == -ETIMEDOUT)
++				mmc_debugfs_err_stats_inc(prev_mmc, MMC_ERR_DAT_TIMEOUT);
++			else if (mrq->data->error == -EILSEQ)
++				mmc_debugfs_err_stats_inc(prev_mmc, MMC_ERR_DAT_CRC);
++		}
++	}
++
+ 	spin_unlock(&host->lock);
+ 	mmc_request_done(prev_mmc, mrq);
+ 	spin_lock(&host->lock);
+@@ -1807,6 +1828,10 @@
+ 	u32 status = host->data_status;
+ 
+ 	if (status & DW_MCI_DATA_ERROR_FLAGS) {
++		dev_warn_ratelimited(host->dev,
++			"data error flags=%08x bytes=%u transferred=%u timeout=%08x\n",
++			status, data->blocks * data->blksz,
++			mci_readl(host, TCBCNT), mci_readl(host, TMOUT));
+ 		if (status & SDMMC_INT_DRTO) {
+ 			data->error = -ETIMEDOUT;
+ 		} else if (status & SDMMC_INT_DCRC) {
+@@ -1849,6 +1874,7 @@
+ {
+ 	const struct dw_mci_drv_data *drv_data = host->drv_data;
+ 	unsigned int drto_clks;
++	u64 total_clks;
+ 	unsigned int drto_div;
+ 	unsigned int drto_ms;
+ 	unsigned long irqflags;
+@@ -1861,7 +1887,16 @@
+ 	if (drto_div == 0)
+ 		drto_div = 1;
+ 
+-	drto_ms = DIV_ROUND_UP_ULL((u64)MSEC_PER_SEC * drto_clks * drto_div,
++	/* TMOUT covers data access latency; the software deadline must also
++	 * allow the complete payload to cross the configured bus. Large reads
++	 * on a 1-bit bus otherwise time out while valid data is still arriving.
++	 */
++	total_clks = drto_clks;
++	if (host->data)
++		total_clks += DIV_ROUND_UP_ULL((u64)host->data->blocks *
++					      host->data->blksz * 8,
++					      1U << host->mmc->ios.bus_width);
++	drto_ms = DIV_ROUND_UP_ULL(MSEC_PER_SEC * total_clks * drto_div,
+ 				   host->bus_hz);
+ 
+ 	dev_dbg(host->dev, "drto_ms: %u\n", drto_ms);
+@@ -3099,6 +3134,10 @@
+ 		 * we should notify the driver to terminate current transfer
+ 		 * and report a data timeout to the core.
+ 		 */
++		dev_warn_ratelimited(host->dev,
++			"software data deadline expired: bytes=%u transferred=%u timeout=%08x\n",
++			mci_readl(host, BYTCNT), mci_readl(host, TCBCNT),
++			mci_readl(host, TMOUT));
+ 		host->data_status = SDMMC_INT_DRTO;
+ 		set_bit(EVENT_DATA_ERROR, &host->pending_events);
+ 		set_bit(EVENT_DATA_COMPLETE, &host->pending_events);
+--- a/drivers/mmc/core/block.c
++++ b/drivers/mmc/core/block.c
+@@ -1851,6 +1851,12 @@
+ 	 * bytes transferred to zero in that case.
+ 	 */
+ 	err = __mmc_send_status(card, &status, 0);
++	pr_warn_ratelimited("%s: recovering CMD%u sector %llu blocks %u: sbc=%d cmd=%d data=%d stop=%d resp=%08x stop_resp=%08x status=%08x bytes=%u\n",
++			    req->q->disk->disk_name, brq->cmd.opcode,
++			    (unsigned long long)blk_rq_pos(req), brq->data.blocks,
++			    brq->sbc.error, brq->cmd.error, brq->data.error,
++			    brq->stop.error, brq->cmd.resp[0], brq->stop.resp[0],
++			    err ? 0 : status, brq->data.bytes_xfered);
+ 	if (err || mmc_blk_status_error(req, status))
+ 		brq->data.bytes_xfered = 0;
+ 

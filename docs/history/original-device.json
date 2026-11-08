@@ -1,0 +1,24 @@
+{
+  "model": "Huawei EC6108V9",
+  "soc": "Hi3798MV100",
+  "architecture": "armhf",
+  "configured_memory": "1G",
+  "emmc_bytes": 3959422976,
+  "reg_name": "hi3798mdmo1d_hi3798mv100_ddr3_2gbyte_8bitx4_4layers_emmc.reg",
+  "boot_configuration": "mdmo1d",
+  "kernel_release": "4.4.35_ecoo_81032968",
+  "kernel_partition": "/dev/mmcblk0p6",
+  "kernel_partition_bytes": 20971520,
+  "kernel_partition_sha256": "da55e2dc90afd43b05066992caae7e180a5c7f7f3b97cf8f6eca386ebd687315",
+  "root_partition": "/dev/mmcblk0p9",
+  "root_partition_bytes": 3319791616,
+  "current_userspace": "Ubuntu 20.04.6 LTS",
+  "preferred_migration": "Reuse the verified kernel; stage and test a separate Armbian root filesystem before changing boot",
+  "verified_on_hardware": [
+    "SSH login over Ethernet IPv6 link-local",
+    "Root access and diagnostic collection",
+    "Mount, PID, network, UTS and IPC namespace creation",
+    "Critical partition backups match remote SHA-256 hashes",
+    "Backed-up kernel uImage header and payload CRCs match"
+  ]
+}
