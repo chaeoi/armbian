@@ -35,13 +35,17 @@ class USBExportTests(unittest.TestCase):
             root, staging, output = [base / name for name in ("root", "staging", "output")]
             release = "fixture-kernel"
             for directory in ("etc/ssh", "root/.ssh", "boot/dtb-" + release,
-                              "lib/modules/" + release, "var/lib/dbus"):
+                              "lib/modules/" + release, "var/lib/dbus", "var/lib/apt/lists",
+                              "var/cache/apt/archives", "var/lib/dpkg"):
                 (root / directory).mkdir(parents=True)
             (root / "etc/armbian-release").write_text("BOARD=ec6108v9\n")
             (root / "etc/ssh/ssh_host_ed25519_key").write_text("fixture identity, must be removed")
             (root / "root/.ssh/authorized_keys").write_text("fixture login, must be removed")
             (root / "etc/machine-id").write_text("fixture-machine")
             (root / "var/lib/dbus/machine-id").write_text("fixture-machine")
+            (root / "var/lib/apt/lists/build-index").write_text("discarded build cache")
+            (root / "var/cache/apt/archives/build.deb").write_text("discarded build download")
+            (root / "var/lib/dpkg/status").write_text("fixture package database")
             kernel = bytearray(64)
             struct.pack_into("<I", kernel, 36, 0x016F2818)
             (root / "boot" / ("vmlinuz-" + release)).write_bytes(kernel)
@@ -55,6 +59,9 @@ class USBExportTests(unittest.TestCase):
             self.assertFalse((root / "etc/ssh/ssh_host_ed25519_key").exists())
             self.assertFalse((root / "root/.ssh").exists())
             self.assertEqual((root / "etc/machine-id").read_bytes(), b"")
+            self.assertFalse((root / "var/lib/apt/lists/build-index").exists())
+            self.assertFalse((root / "var/cache/apt/archives/build.deb").exists())
+            self.assertEqual((root / "var/lib/dpkg/status").read_text(), "fixture package database")
             self.assertIn("/dev/mmcblk0p3", (root / "etc/fstab").read_text())
             filesystem = base / "rootfs.ext4"
             with filesystem.open("wb") as stream:

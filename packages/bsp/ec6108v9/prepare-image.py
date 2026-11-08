@@ -76,6 +76,16 @@ def prepare(root, staging, source, version):
         for path in (root / "boot").glob(pattern):
             if path.is_file() or path.is_symlink():
                 path.unlink()
+    # The framework's final initramfs chroot can repopulate these download caches.
+    for name in ("var/lib/apt/lists", "var/cache/apt/archives"):
+        directory = root / name
+        if directory.exists():
+            for path in directory.iterdir():
+                if path.is_dir() and not path.is_symlink():
+                    shutil.rmtree(path)
+                else:
+                    path.unlink()
+        (directory / "partial").mkdir(parents=True, exist_ok=True)
     if (root / "etc/machine-id").read_bytes() or list((root / "etc/ssh").glob("ssh_host_*_key")):
         raise ValueError("Per-device identity remained in the image")
     return metadata
