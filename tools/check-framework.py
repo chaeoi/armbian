@@ -12,6 +12,7 @@ def verify(path):
     values = json.loads(path.read_text())
     expected = {"ARCH": "armhf", "BOARD_TYPE": "tvb", "BOARDFAMILY": "hi3798mv100",
                 "BOARD_NAME": "Huawei EC6108V9", "BOOTCONFIG": "none", "ROOTFS_TYPE": "ext4",
+                "BOOT_FDT_FILE": "hi3798mv100-ec6108v9.dtb",
                 "KERNELSOURCE": SOURCE_INFO["repository"], "KERNELBRANCH": "commit:" + SOURCE_INFO["commit"],
                 "KERNELPATCHDIR": "archive/hi3798mv100-7.3", "OFFSET": "34", "EXTRAWIFI": "no",
                 "SKIP_COMPRESSING": "json"}

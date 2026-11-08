@@ -34,7 +34,7 @@ class USBExportTests(unittest.TestCase):
             base = Path(temporary)
             root, staging, output = [base / name for name in ("root", "staging", "output")]
             release = "fixture-kernel"
-            for directory in ("etc/ssh", "root/.ssh", "boot/dtb-" + release + "/hisilicon",
+            for directory in ("etc/ssh", "root/.ssh", "boot/dtb-" + release,
                               "lib/modules/" + release, "var/lib/dbus"):
                 (root / directory).mkdir(parents=True)
             (root / "etc/armbian-release").write_text("BOARD=ec6108v9\n")
@@ -48,7 +48,7 @@ class USBExportTests(unittest.TestCase):
             dts = base / "fixture.dts"
             dts.write_text('/dts-v1/; / { aliases { mmc0="/soc@f0000000/ahb/mmc@9830000"; '
                            'mmc1="/soc@f0000000/ahb/mmc@9820000"; }; };')
-            dtb = root / "boot" / ("dtb-" + release) / "hisilicon/hi3798mv100-ec6108v9.dtb"
+            dtb = root / "boot" / ("dtb-" + release) / "hi3798mv100-ec6108v9.dtb"
             subprocess.run(["dtc", "-q", "-I", "dts", "-O", "dtb", "-o", str(dtb), str(dts)], check=True)
             version = "Armbian-test_Ec6108v9_jammy_edge_fixture_minimal"
             prepare.prepare(root, staging, PROJECT, version)

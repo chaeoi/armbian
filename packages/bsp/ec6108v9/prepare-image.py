@@ -22,11 +22,15 @@ def prepare(root, staging, source, version):
         raise ValueError("Exactly one installed kernel is required")
     release = modules[0].name
     kernel = root / "boot" / ("vmlinuz-" + release)
-    dtbs = [root / "boot" / ("dtb-" + release) / board["dtb_target"],
-            root / "usr/lib" / ("linux-image-" + release) / board["dtb_target"]]
+    # ARM32 dtbs_install flattens the vendor directory in this kernel.
+    dtbs = [directory / relative
+            for directory in (root / "boot" / ("dtb-" + release),
+                              root / "usr/lib" / ("linux-image-" + release))
+            for relative in (board["dtb_target"], Path(board["dtb_target"]).name)]
     dtb = next((path for path in dtbs if path.is_file()), None)
     if not kernel.is_file() or dtb is None:
-        raise ValueError("Installed kernel or EC6108V9 DTB is missing")
+        raise ValueError("Installed kernel or EC6108V9 DTB is missing; checked: " +
+                         ", ".join(map(str, [kernel, *dtbs])))
     for name, expected in (("mmc0", "/soc@f0000000/ahb/mmc@9830000"),
                            ("mmc1", "/soc@f0000000/ahb/mmc@9820000")):
         actual = subprocess.check_output(["fdtget", str(dtb), "/aliases", name], text=True).strip()
