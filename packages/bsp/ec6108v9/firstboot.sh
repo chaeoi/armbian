@@ -42,5 +42,13 @@ for stanza in Path('/var/lib/dpkg/status').read_text().split('\n\n'):
         packages.append(name)
 if packages:subprocess.run(['apt-mark','hold',*packages],check=True)
 PY
+# Set the image's root password before the SSH service can start.
+printf '%s\n' 'root:1234567890' | chpasswd
+install -d -m 0755 /etc/ssh/sshd_config.d
+cat > /etc/ssh/sshd_config.d/00-ec6108v9-login.conf <<'EOF'
+PermitRootLogin yes
+PasswordAuthentication yes
+EOF
+rm -f /root/.not_logged_in_yet
 mkdir -p "$state"
 touch "$state/initialized"

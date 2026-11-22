@@ -80,6 +80,7 @@ class USBExportTests(unittest.TestCase):
             self.assertFalse(manifest["tested_boot"])
             self.assertFalse(manifest["private_device_configuration"])
             self.assertEqual(manifest["rootfs"]["expanded_bytes"], 64 * 1024 * 1024)
+            self.assertEqual(manifest["files"]["root"]["sectors"], 64 * 1024 * 1024 // 512)
             self.assertEqual(manifest["image_type"], "usb-installer")
             compressed = disk.with_name(disk.name + ".xz")
             with disk.open("rb") as source, lzma.open(compressed, "wb", preset=0) as target:

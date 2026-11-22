@@ -98,7 +98,7 @@ def export(image, staging, output, version, source_root):
         for name in ("baseparam.img", "pq_param.bin", "logo.img"):
             padded(name, (source_root / bootstrap["files"][name]["path"]).read_bytes(), 4 * 1024 * 1024)
         files = {}
-        for key, (name, sector, sectors) in flash_positions(board).items():
+        for key, (name, sector, sectors) in flash_positions(board, root_bytes).items():
             sha, crc = digest(payload / name)
             files[key] = {"filename": "mv100/" + name, "sector": sector, "sectors": sectors,
                           "sha256": sha, "crc32": crc, "bytes": (payload / name).stat().st_size,
@@ -122,7 +122,8 @@ def export(image, staging, output, version, source_root):
             "Power off, connect USB and Ethernet, use the USB-boot short for the actual PCB, then power on.\n"
             "Release the short after USB boot starts. Wait for installation and the automatic reboot.\n"
             "This erases the internal OS. Keep power connected. Remove this USB drive after installation.\n"
-            "SSH: root / 1234. Change the password at first login. No Wi-Fi credentials are included.\n"
+            "SSH: root / 1234567890. Change the password after installation.\n"
+            "No Wi-Fi credentials are included.\n"
             "This build has not been boot-tested. Check the repository validation report before flashing.\n")
         names = sorted(path for path in package.rglob("*") if path.is_file())
         (package / "SHA256SUMS").write_text("".join(digest(path)[0] + "  " + path.relative_to(package).as_posix() + "\n" for path in names))

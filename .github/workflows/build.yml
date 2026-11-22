@@ -120,7 +120,7 @@ jobs:
           Write the .img.xz to a USB 2.0 drive using Armbian Imager (local/custom image).
           Enter the board's USB-boot mode to install Armbian to internal eMMC.
           The installer erases the internal OS and installs one Armbian system.
-          Initial SSH login is root / 1234. Change the password on first login.
+          Initial SSH login is root / 1234567890. Change the password after installation.
           This community RC build has not completed a hardware USB-flash test.
           Keep the manifest and checksums with the image. Read the repository installation guide.
           NOTES

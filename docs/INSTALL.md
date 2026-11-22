@@ -1,11 +1,12 @@
 # U 盘安装 Armbian
 
 仅针对已确认的 EC6108V9 / Hi3798MV100 / mdmo1d / 1 GiB RAM / 4 GB eMMC。
-完整 GitHub Actions 构建及镜像校验已通过，硬件 USB 刷入尚待验证，见 [当前记录](validation/GITHUB-BUILD-20261109.md)。
+样机已通过 U 盘启动、eMMC 写入及拔盘启动验证。GitHub Actions 的构建记录见 [云端构建记录](validation/GITHUB-BUILD-20261109.md)。
 
 ## 获取产物
 
-在 [GitHub Actions](https://github.com/chaeoi/armbian/actions/workflows/build.yml) 手动运行 USB 工作流。
+从 [GitHub Releases](https://github.com/chaeoi/armbian/releases) 下载 `.img.xz`、`.img.xz.sha` 和清单。
+需要重建时，在 [GitHub Actions](https://github.com/chaeoi/armbian/actions/workflows/build.yml) 手动运行 USB 工作流。
 成功后下载 Artifact，解开 GitHub 提供的外层归档，取出 `.img.xz` 和 `.img.xz.sha`。
 `.img.xz` 是最终写盘镜像，适配源码 `.tar.gz` 不用于刷机。
 可选的 `publish` 输入会将成功构建发布为预发布版本。
@@ -29,14 +30,14 @@ sha256sum -c Armbian-unofficial_*.img.xz.sha
 3. USB 启动开始后放开短接。保持供电，等待写入和自动重启。
 4. 正常启动后在路由器查找 DHCP 地址，用 SSH 登录。
 
-本项目尚未实测这块主板的短接位置，不能将外壳 V9/V9C 型号当作点位证据。
+样机已通过 USB 启动短接验证。请按实际 PCB 确认位置，外壳的 V9/V9C 标识可能对应不同板型。
 原始参考见 [海纳思 USB 启动教程](https://www.ecoo.top/docs/tutorial-basics/usb-flash/)。
 无需盒子原系统能启动，也无需预先 SSH 登录。不使用电脑双公 USB 线。
 刷写本身不需要网络；网线用于安装完成后的首次登录。
 刷写会清除内置系统数据，安装一个 Armbian；SD 和其他 USB 盘不是目标。
 实际写入时间取决于 U 盘和 eMMC，不能按固定秒数断电。
 
-首次 SSH：`root` / `1234`，按官方首次登录流程修改密码。
+首次通过 SSH 使用 `root` 登录，初始密码为 `1234567890`。登录后修改密码。
 系统首次启动会扩展 ext4，并生成独立 SSH 主机密钥和本地 MAC。
 SD 按已固定的第二个 MMC 卡槽自动挂载到 `/mnt/sdcard`，不按开发者的卡 UUID 固定。
 不包含任何人的 Wi-Fi 配置；先通过有线网络进入系统，再配置无线。

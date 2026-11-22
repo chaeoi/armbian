@@ -9,9 +9,12 @@ LOAD = "0x1000000"
 SCRATCH, EXPECTED = "0x800000", "0x800004"
 
 
-def flash_positions(board):
+def flash_positions(board, root_bytes):
     root = board["layout"]["root_offset"]
-    return {"root": ("rootfs.ext4", root // 512, (board["emmc_bytes"] - root) // 512),
+    if type(root_bytes) is not int or root_bytes <= 0 or root_bytes % 512 or root_bytes > board["emmc_bytes"] - root:
+        raise ValueError("Invalid expanded root filesystem size")
+    # HiSilicon's sparse writer requires the expanded image length exactly.
+    return {"root": ("rootfs.ext4", root // 512, root_bytes // 512),
             "kernel": ("kernel.bin", 0x7000, 0xA000),
             "base": ("baseparam.img", 0x1000, 0x2000),
             "pq": ("pq_param.bin", 0x3000, 0x2000),

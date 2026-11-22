@@ -33,7 +33,7 @@ def verify(path):
                 or manifest["board"] != "ec6108v9" or manifest["emmc_bytes"] != BOARD["emmc_bytes"]
                 or manifest["disk"] != DISK_LAYOUT):
             raise ValueError("Unexpected board image")
-        positions = flash_positions(BOARD)
+        positions = flash_positions(BOARD, manifest["rootfs"]["expanded_bytes"])
         if set(manifest["files"]) != set(positions):
             raise ValueError("Unexpected flashing file set")
         for key, (filename, sector, sectors) in positions.items():
@@ -88,7 +88,7 @@ def verify(path):
             raise ValueError("Kernel manifest digest differs")
         with (package / "mv100/rootfs.ext4").open("rb") as stream:
             rootfs = inspect(stream)
-        if rootfs != manifest["rootfs"] or rootfs["expanded_bytes"] > positions["root"][2] * 512:
+        if rootfs != manifest["rootfs"]:
             raise ValueError("Sparse filesystem readback differs")
         sidecar = path.with_name(path.name.split(".img", 1)[0] + ".manifest.json")
         if sidecar.exists() and json.loads(sidecar.read_text()) != manifest:
