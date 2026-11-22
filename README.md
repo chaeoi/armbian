@@ -1,6 +1,6 @@
 # Armbian for Huawei EC6108V9
 
-[![Build USB image](https://github.com/chaeoi/armbian/actions/workflows/build.yml/badge.svg)](https://github.com/chaeoi/armbian/actions/workflows/build.yml)
+[![Build USB image](https://github.com/chaeoi/armbian-ec6108v9/actions/workflows/build.yml/badge.svg)](https://github.com/chaeoi/armbian-ec6108v9/actions/workflows/build.yml)
 
 Huawei EC6108V9 / Hi3798MV100 的 Armbian 社区适配。目标为 **mdmo1d、1 GiB RAM、4 GB eMMC** 样机。
 仓库通过固定版本的官方 Armbian Build Framework 构建内核、BSP 和 Jammy 最小系统，输出 **`.img.xz` U 盘安装镜像**。
@@ -11,8 +11,8 @@ Huawei EC6108V9 / Hi3798MV100 的 Armbian 社区适配。目标为 **mdmo1d、1 
 
 ## 下载和刷机
 
-从 [GitHub Releases](https://github.com/chaeoi/armbian/releases) 下载镜像和校验文件。
-也可以通过 [GitHub Actions](https://github.com/chaeoi/armbian/actions/workflows/build.yml) 构建最新源码。
+从 [GitHub Releases](https://github.com/chaeoi/armbian-ec6108v9/releases) 下载镜像和校验文件。
+也可以通过 [GitHub Actions](https://github.com/chaeoi/armbian-ec6108v9/actions/workflows/build.yml) 构建最新源码。
 镜像使用官方框架计算的名称与 `.img.xz` 格式，例如：
 
 ```text
@@ -28,6 +28,10 @@ Armbian-unofficial_26.11.0-trunk_Ec6108v9_jammy_edge_<kernel>_minimal.img.xz
 样机已用 USB 启动短接恢复。不同 PCB 的短接点可能不同，按板号和丝印确认位置。
 镜像是内置系统的安装盘，包含已准备好的 FAT32 分区和烧写文件。
 完整步骤、盘内文件和验证范围见 [安装指南](docs/INSTALL.md) 与 [USB 构建记录](docs/validation/USB-PIPELINE-20261108.md)。
+
+## 软件更新
+
+本项目通过 GitHub Pages 提供签名的 EC6108V9 APT 软件源。发布、首次接入和升级流程见 [构建指南](docs/BUILD.md#发布板级-apt-软件包)。
 
 ## 构建
 

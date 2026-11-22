@@ -3,6 +3,10 @@ name: Build EC6108V9 USB image
 on:
   workflow_dispatch:
     inputs:
+      kernel_abi:
+        description: Positive integer ABI suffix for a new EC6108V9 APT kernel
+        type: string
+        default: ""
       publish:
         description: Publish the result as a prerelease
         type: boolean
@@ -57,7 +61,10 @@ jobs:
           restore-keys: |
             ec6108v9-jammy-${{ hashFiles('config/sources/armbian-build.json', 'config/sources/linux-hi3798mv100.json', 'config/kernel/**', 'patch/**') }}-
       - name: Build with the official Armbian framework
+        env:
+          EC6108_KERNEL_ABI: ${{ inputs.kernel_abi }}
         run: |
+          [[ -z "$EC6108_KERNEL_ABI" || "$EC6108_KERNEL_ABI" =~ ^[1-9][0-9]{0,5}$ ]]
           ./compile.sh build BOARD=ec6108v9 BRANCH=edge RELEASE=jammy \
             BUILD_MINIMAL=yes BUILD_DESKTOP=no KERNEL_CONFIGURE=no \
             KERNEL_GIT=shallow PREFER_DOCKER=no

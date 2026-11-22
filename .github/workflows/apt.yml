@@ -1,0 +1,114 @@
+name: Publish EC6108V9 APT archive
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        description: Successful EC6108V9 USB build run ID on main
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ec6108v9-apt
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Verify source run
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN: ${{ inputs.build_run }}
+        run: |
+          [[ "$BUILD_RUN" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN" |
+            jq -er 'select(.path == ".github/workflows/build.yml" and .head_branch == "main" and .conclusion == "success") | "artifact=ec6108v9-usb-\(.run_number)"' >> "$GITHUB_OUTPUT"
+          printf 'version=1.%s.%s\n' "$GITHUB_RUN_NUMBER" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ steps.source.outputs.artifact }}
+          run-id: ${{ inputs.build_run }}
+          github-token: ${{ github.token }}
+          path: image
+      - name: Package verified image kernel
+        env:
+          PACKAGE_VERSION: ${{ steps.source.outputs.version }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dosfstools mtools e2fsprogs
+          python3 tools/build-apt-kernel.py image/images/*.img.xz "$PACKAGE_VERSION" deb
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ec6108v9-apt-deb
+          path: deb/*.deb
+          if-no-files-found: error
+
+  publish:
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}apt/
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: config/apt
+      - uses: actions/download-artifact@v8
+        with:
+          name: ec6108v9-apt-deb
+          path: site/apt/pool/main
+      - name: Generate archive index
+        working-directory: site/apt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apt-utils
+          mkdir -p dists/jammy/main/binary-armhf
+          apt-ftparchive packages pool > dists/jammy/main/binary-armhf/Packages
+          gzip -n -k dists/jammy/main/binary-armhf/Packages
+          apt-ftparchive \
+            -o APT::FTPArchive::Release::Origin=EC6108V9 \
+            -o APT::FTPArchive::Release::Label=EC6108V9 \
+            -o APT::FTPArchive::Release::Codename=jammy \
+            -o APT::FTPArchive::Release::Suite=jammy \
+            -o APT::FTPArchive::Release::Architectures=armhf \
+            -o APT::FTPArchive::Release::Components=main \
+            release dists/jammy > Release
+          mv Release dists/jammy/
+          cp ../../config/apt/ec6108v9-archive-keyring.asc .
+      - name: Sign and verify archive
+        working-directory: site/apt
+        env:
+          ARCHIVE_KEY: ${{ secrets.EC6108V9_APT_SIGNING_KEY }}
+        run: |
+          umask 077
+          export GNUPGHOME="$(mktemp -d)"
+          trap 'gpgconf --kill all; find "$GNUPGHOME" -depth -delete' EXIT
+          fingerprint="$(gpg --batch --show-keys --with-colons ec6108v9-archive-keyring.asc |
+            awk -F: '$1=="fpr" {print $10; exit}')"
+          [[ "$fingerprint" =~ ^[A-F0-9]{40}$ ]]
+          printf '%s\n' "$ARCHIVE_KEY" | gpg --batch --import
+          gpg --batch --local-user "$fingerprint" --digest-algo SHA256 --clearsign \
+            --output dists/jammy/InRelease dists/jammy/Release
+          gpg --batch --dearmor --output "$GNUPGHOME/public.gpg" ec6108v9-archive-keyring.asc
+          gpgv --keyring "$GNUPGHOME/public.gpg" dists/jammy/InRelease
+          chmod 0644 dists/jammy/InRelease
+          unset ARCHIVE_KEY
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - uses: actions/deploy-pages@v4
+        id: deploy

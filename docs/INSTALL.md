@@ -5,8 +5,8 @@
 
 ## 获取产物
 
-从 [GitHub Releases](https://github.com/chaeoi/armbian/releases) 下载 `.img.xz`、`.img.xz.sha` 和清单。
-需要重建时，在 [GitHub Actions](https://github.com/chaeoi/armbian/actions/workflows/build.yml) 手动运行 USB 工作流。
+从 [GitHub Releases](https://github.com/chaeoi/armbian-ec6108v9/releases) 下载 `.img.xz`、`.img.xz.sha` 和清单。
+需要重建时，在 [GitHub Actions](https://github.com/chaeoi/armbian-ec6108v9/actions/workflows/build.yml) 手动运行 USB 工作流。
 成功后下载 Artifact，解开 GitHub 提供的外层归档，取出 `.img.xz` 和 `.img.xz.sha`。
 `.img.xz` 是最终写盘镜像，适配源码 `.tar.gz` 不用于刷机。
 可选的 `publish` 输入会将成功构建发布为预发布版本。

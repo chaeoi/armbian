@@ -2,7 +2,7 @@
 
 ## 完整构建通过
 
-提交 `c73aa56676c890f332a796e63c0bfef0e62a7a81` 的 [Actions 运行](https://github.com/chaeoi/armbian/actions/runs/42499929659) 全部通过：
+提交 `c73aa56676c890f332a796e63c0bfef0e62a7a81` 的 [Actions 运行](https://github.com/chaeoi/armbian-ec6108v9/actions/runs/42499929659) 全部通过：
 主机检查、原生配置解析、内核/BSP/根系统构建、USB 磁盘校验、源码归档和产物上传。
 未启用可选的预发布步骤。
 
@@ -27,12 +27,12 @@
 
 | 提交 / 运行 | 发现与修复 |
 | --- | --- |
-| `730beb8` / [42490541779](https://github.com/chaeoi/armbian/actions/runs/42490541779) | CI 日志分组标记进入 JSON；配置导出关闭 CI 分组输出 |
-| `5eb1c55` / [42491148579](https://github.com/chaeoi/armbian/actions/runs/42491148579) | 过早屏蔽服务导致官方启用步骤失败；移到服务初始化之后 |
-| `4e32a77` / [42495431287](https://github.com/chaeoi/armbian/actions/runs/42495431287) | ARM32 的 DTB 安装为平铺目录；增加实际路径并保留兼容检查 |
-| `1ffaf16` / [42497414812](https://github.com/chaeoi/armbian/actions/runs/42497414812) | 稀疏文件超过内存限制；接入官方空闲块清零扩展 |
-| `d12e746` / [42498295439](https://github.com/chaeoi/armbian/actions/runs/42498295439) | 最终 chroot 残留约 92 MiB APT 索引；在导出前再次清理 |
-| `89e9f3b` / [42499060559](https://github.com/chaeoi/armbian/actions/runs/42499060559) | 镜像已构建，但框架覆盖输出路径；在配置完成钩子设置最终目录 |
+| `730beb8` / [42490541779](https://github.com/chaeoi/armbian-ec6108v9/actions/runs/42490541779) | CI 日志分组标记进入 JSON；配置导出关闭 CI 分组输出 |
+| `5eb1c55` / [42491148579](https://github.com/chaeoi/armbian-ec6108v9/actions/runs/42491148579) | 过早屏蔽服务导致官方启用步骤失败；移到服务初始化之后 |
+| `4e32a77` / [42495431287](https://github.com/chaeoi/armbian-ec6108v9/actions/runs/42495431287) | ARM32 的 DTB 安装为平铺目录；增加实际路径并保留兼容检查 |
+| `1ffaf16` / [42497414812](https://github.com/chaeoi/armbian-ec6108v9/actions/runs/42497414812) | 稀疏文件超过内存限制；接入官方空闲块清零扩展 |
+| `d12e746` / [42498295439](https://github.com/chaeoi/armbian-ec6108v9/actions/runs/42498295439) | 最终 chroot 残留约 92 MiB APT 索引；在导出前再次清理 |
+| `89e9f3b` / [42499060559](https://github.com/chaeoi/armbian-ec6108v9/actions/runs/42499060559) | 镜像已构建，但框架覆盖输出路径；在配置完成钩子设置最终目录 |
 
 复用官方内核包和根系统缓存后，后续完整构建可跳过重复交叉编译。
 GitHub 操作通过本机既有 VS Code Git 认证助手完成，没有将凭据加入仓库或产物。

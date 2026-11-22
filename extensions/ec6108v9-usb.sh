@@ -1,5 +1,13 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
+function custom_kernel_config__ec6108v9_apt_abi() {
+	if [[ -n "${EC6108_KERNEL_ABI:-}" ]]; then
+		[[ "${EC6108_KERNEL_ABI}" =~ ^[1-9][0-9]{0,5}$ ]] ||
+			exit_with_error "Invalid EC6108V9 kernel ABI suffix" "${EC6108_KERNEL_ABI}"
+		opts_val["LOCALVERSION"]="\"-ec6108v9.${EC6108_KERNEL_ABI}\""
+	fi
+}
+
 function add_host_dependencies__ec6108v9_usb() {
 	EXTRA_BUILD_DEPS+=("mtools" "dosfstools")
 }

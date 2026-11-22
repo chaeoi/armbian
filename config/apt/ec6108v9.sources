@@ -1,0 +1,6 @@
+Types: deb
+URIs: https://chaeoi.github.io/armbian-ec6108v9/apt/
+Suites: jammy
+Components: main
+Architectures: armhf
+Signed-By: /usr/share/keyrings/ec6108v9-archive-keyring.asc

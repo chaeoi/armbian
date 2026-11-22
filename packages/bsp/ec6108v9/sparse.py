@@ -55,7 +55,7 @@ def encode(source, destination):
     return blocks * BLOCK
 
 
-def inspect(source):
+def inspect(source, destination=None):
     header = source.read(HEADER.size)
     if len(header) != HEADER.size:
         raise ValueError("Truncated sparse header")
@@ -80,6 +80,8 @@ def inspect(source):
                 if not data:
                     raise ValueError("Truncated RAW chunk")
                 digest.update(data)
+                if destination is not None:
+                    destination.write(data)
                 remaining -= len(data)
         elif kind == FILL:
             if length != CHUNK.size + 4:
@@ -88,11 +90,22 @@ def inspect(source):
             if len(value) != 4:
                 raise ValueError("Truncated FILL chunk")
             data = value * (BLOCK // 4)
-            for _ in range(chunk_blocks):
-                digest.update(data)
+            remaining = chunk_blocks
+            while remaining:
+                batch = min(remaining, 256)
+                chunk_data = data * batch
+                digest.update(chunk_data)
+                if destination is not None:
+                    if value == bytes(4):
+                        destination.seek(len(chunk_data), 1)
+                    else:
+                        destination.write(chunk_data)
+                remaining -= batch
         else:
             raise ValueError("Only explicit RAW/FILL chunks are allowed")
         total += chunk_blocks
     if total != blocks or source.read(1):
         raise ValueError("Sparse size mismatch or trailing data")
+    if destination is not None:
+        destination.truncate(total * BLOCK)
     return {"expanded_bytes": total * BLOCK, "expanded_sha256": digest.hexdigest(), "chunks": count}
