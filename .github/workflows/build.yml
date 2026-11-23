@@ -71,7 +71,7 @@ jobs:
       - name: Verify USB installer disk image
         env:
           EC6108_KERNEL_ABI: ${{ inputs.kernel_abi }}
-        run: python3 tools/verify-usb.py --check-apt --kernel-abi "$EC6108_KERNEL_ABI" output/images/*.img.xz
+        run: python3 tools/verify-usb.py --check-apt --check-first-login --kernel-abi "$EC6108_KERNEL_ABI" output/images/*.img.xz
       - name: Save native build artifacts
         uses: actions/cache/save@v5
         with:
@@ -129,7 +129,7 @@ jobs:
           Enter the board's USB-boot mode to install Armbian to internal eMMC.
           The installer erases the internal OS and installs one Armbian system.
           Use wired Ethernet for initial setup. Configure Wi-Fi and removable storage mounts as needed.
-          Initial SSH login is root / 1234567890. Change the password after installation.
+          First SSH login uses root and the initial password 1234. Follow the Armbian setup prompts.
           This community RC build has not completed a hardware USB-flash test.
           Keep the manifest and checksums with the image. Read the repository installation guide.
           NOTES

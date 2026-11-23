@@ -56,7 +56,7 @@ function post_customize_image__900_ec6108v9_runtime() {
 	install -Dm755 "${bsp}/verify-direct-system.py" "${SDCARD}/usr/local/sbin/ec6108-verify-system"
 	cat > "${SDCARD}/etc/systemd/system/ec6108v9-firstboot.service" <<-'UNIT'
 		[Unit]
-		Description=Initialize EC6108V9 storage, device identity and root login
+		Description=Initialize EC6108V9 storage and device identity
 		DefaultDependencies=no
 		After=local-fs.target systemd-udev-settle.service
 		Before=sysinit.target network-pre.target systemd-networkd.service ssh.service

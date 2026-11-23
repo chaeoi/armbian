@@ -122,7 +122,7 @@ def export(image, staging, output, version, source_root):
             "Power off, connect USB and Ethernet, use the USB-boot short for the actual PCB, then power on.\n"
             "Release the short after USB boot starts. Wait for installation and the automatic reboot.\n"
             "This erases the internal OS. Keep power connected. Remove this USB drive after installation.\n"
-            "SSH: root / 1234567890. Change the password after installation.\n"
+            "First SSH login uses root and the initial password 1234. Follow the Armbian setup prompts.\n"
             "No Wi-Fi credentials are included.\n"
             "This build has not been boot-tested. Check the repository validation report before flashing.\n")
         names = sorted(path for path in package.rglob("*") if path.is_file())

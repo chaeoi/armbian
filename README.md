@@ -22,7 +22,7 @@ Armbian-unofficial_26.11.0-trunk_Ec6108v9_jammy_edge_<kernel>_minimal.img.xz
 1. 校验 `.img.xz.sha`，用 Armbian Imager 的本地镜像入口写入至少 1 GB 的 USB 2.0 U 盘。
 2. 断电，插入 U 盘、接网线，按实际主板短接点进入 USB 启动模式。
 3. USB 启动后放开短接，保持供电，等待写入和自动重启。
-4. 首次启动通过有线 DHCP 获取地址。SSH 初始账号为 `root`，密码为 `1234567890`。登录后修改密码。
+4. 首次启动通过有线 DHCP 获取地址。用 `root` 和初始密码 `1234` 登录 SSH，按 Armbian 向导修改密码并创建日常账号。
 
 安装会删除内置系统及数据，最终只有一个 Armbian。SD 和其他 USB 存储不在烧写目标内。
 新构建的镜像保留存储和无线支持，SD、USB 存储挂载及 Wi-Fi 连接由用户配置。

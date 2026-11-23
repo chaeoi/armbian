@@ -21,7 +21,7 @@ from usb_disk import contents, DISK_LAYOUT
 from usb_layout import boot_environment, flash_environment, flash_positions
 
 
-def verify_defaults(filesystem, manifest, check_apt):
+def verify_defaults(filesystem, manifest, check_apt, check_first_login):
     def debugfs(command):
         return subprocess.check_output(["debugfs", "-R", command, str(filesystem)],
                                        text=True, stderr=subprocess.DEVNULL)
@@ -51,6 +51,22 @@ def verify_defaults(filesystem, manifest, check_apt):
                    for name in names("/etc/netplan") if name.endswith(".yaml"))):
         raise ValueError("Unexpected Wi-Fi connection profile")
 
+    if check_first_login:
+        profile = debugfs("cat /etc/profile.d/armbian-check-first-login.sh")
+        if (".not_logged_in_yet" not in names("/root")
+                or debugfs("cat /root/.not_logged_in_yet")
+                or "/usr/lib/armbian/armbian-firstlogin" not in profile
+                or not debugfs("cat /usr/lib/armbian/armbian-firstlogin")
+                or "00-ec6108v9-login.conf" in names("/etc/ssh/sshd_config.d")):
+            raise ValueError("Expected the unconfigured Armbian first login wizard")
+        password_hash = next((line.split(":")[1] for line in debugfs("cat /etc/shadow").splitlines()
+                              if line.startswith("root:")), "")
+        if not password_hash or subprocess.run(
+            ["perl", "-e", 'my $hash = <STDIN>; chomp $hash; exit(crypt("1234", $hash) ne $hash);'],
+            input=password_hash + "\n", text=True,
+        ).returncode:
+            raise ValueError("Image root password differs from the Armbian default")
+
     if check_apt:
         for source, destination in (
             ("ec6108v9.sources", "/etc/apt/sources.list.d/ec6108v9.sources"),
@@ -73,7 +89,7 @@ def verify_defaults(filesystem, manifest, check_apt):
             raise ValueError("Preinstalled APT kernel differs from the boot image")
 
 
-def verify(path, kernel_abi="", check_defaults=False, check_apt=False):
+def verify(path, kernel_abi="", check_defaults=False, check_apt=False, check_first_login=False):
     checksum = path.with_name(path.name + ".sha")
     if checksum.exists() or path.name.endswith(".img.xz"):
         fields = checksum.read_text().split()
@@ -146,12 +162,12 @@ def verify(path, kernel_abi="", check_defaults=False, check_apt=False):
         if hashlib.sha256(kernel[:size]).hexdigest() != manifest["kernel_sha256"]:
             raise ValueError("Kernel manifest digest differs")
         with (package / "mv100/rootfs.ext4").open("rb") as stream:
-            if check_defaults or check_apt:
+            if check_defaults or check_apt or check_first_login:
                 with tempfile.TemporaryDirectory(prefix="ec6108-verify-") as temporary:
                     filesystem = Path(temporary) / "root.ext4"
                     with filesystem.open("wb") as expanded:
                         rootfs = inspect(stream, expanded)
-                    verify_defaults(filesystem, manifest, check_apt)
+                    verify_defaults(filesystem, manifest, check_apt, check_first_login)
             else:
                 rootfs = inspect(stream)
         if rootfs != manifest["rootfs"]:
@@ -167,8 +183,9 @@ if __name__ == "__main__":
     parser.add_argument("--kernel-abi", default="")
     parser.add_argument("--check-defaults", action="store_true")
     parser.add_argument("--check-apt", action="store_true")
+    parser.add_argument("--check-first-login", action="store_true")
     parser.add_argument("images", nargs="+", type=Path)
     args = parser.parse_args()
     for image in args.images:
-        metadata = verify(image, args.kernel_abi, args.check_defaults, args.check_apt)
+        metadata = verify(image, args.kernel_abi, args.check_defaults, args.check_apt, args.check_first_login)
         print(image.name + ": verified; " + metadata["kernel_release"] + "; hardware boot test pending")
