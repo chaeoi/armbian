@@ -29,7 +29,8 @@ def prepare(destination):
              "config/kernel/linux-hi3798mv100-edge.config",
              "config/sources/armbian-build.json", "config/sources/linux-hi3798mv100.json",
              "config/sources/families/hi3798mv100.conf", "config/sources/usb-bootstrap.json",
-             "config/sources/ec6108v9-firmware.json", "extensions/ec6108v9-usb.sh"]
+             "config/sources/ec6108v9-firmware.json", "extensions/ec6108v9-usb.sh",
+             "config/apt/ec6108v9-archive-keyring.asc", "config/apt/ec6108v9.sources"]
     for name in files:
         target = destination / name
         target.parent.mkdir(parents=True, exist_ok=True)

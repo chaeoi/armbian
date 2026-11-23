@@ -15,12 +15,13 @@ from port import BOARD, PROJECT
 from uimage import validate_image
 
 sys.path.insert(0, str(PROJECT / "packages/bsp/ec6108v9"))
+from kernel_package import PACKAGE, PAYLOAD, image_package_version
 from sparse import inspect
 from usb_disk import contents, DISK_LAYOUT
 from usb_layout import boot_environment, flash_environment, flash_positions
 
 
-def verify_defaults(filesystem):
+def verify_defaults(filesystem, manifest, check_apt):
     def debugfs(command):
         return subprocess.check_output(["debugfs", "-R", command, str(filesystem)],
                                        text=True, stderr=subprocess.DEVNULL)
@@ -50,8 +51,29 @@ def verify_defaults(filesystem):
                    for name in names("/etc/netplan") if name.endswith(".yaml"))):
         raise ValueError("Unexpected Wi-Fi connection profile")
 
+    if check_apt:
+        for source, destination in (
+            ("ec6108v9.sources", "/etc/apt/sources.list.d/ec6108v9.sources"),
+            ("ec6108v9-archive-keyring.asc", "/usr/share/keyrings/ec6108v9-archive-keyring.asc"),
+        ):
+            if debugfs("cat " + destination) != (PROJECT / "config/apt" / source).read_text():
+                raise ValueError("APT source or signing key missing or different")
+        status = debugfs("cat /var/lib/dpkg/status")
+        stanzas = [block.splitlines() for block in status.split("\n\n")]
+        expected_version = "Version: " + image_package_version(manifest)
+        if not any({f"Package: {PACKAGE}", "Status: install ok installed", expected_version}
+                   .issubset(stanza) for stanza in stanzas):
+            raise ValueError("Image kernel is not installed as an APT package")
+        fields = ("kernel_release", "kernel_bytes", "kernel_sha256")
+        if json.loads(debugfs(f"cat /{PAYLOAD}/kernel.json")) != {key: manifest[key] for key in fields}:
+            raise ValueError("Preinstalled APT kernel metadata differs from the boot image")
+        packaged_kernel = subprocess.check_output(
+            ["debugfs", "-R", f"cat /{PAYLOAD}/uImage", str(filesystem)], stderr=subprocess.DEVNULL)
+        if hashlib.sha256(packaged_kernel).hexdigest() != manifest["kernel_sha256"]:
+            raise ValueError("Preinstalled APT kernel differs from the boot image")
 
-def verify(path, kernel_abi="", check_defaults=False):
+
+def verify(path, kernel_abi="", check_defaults=False, check_apt=False):
     checksum = path.with_name(path.name + ".sha")
     if checksum.exists() or path.name.endswith(".img.xz"):
         fields = checksum.read_text().split()
@@ -124,12 +146,12 @@ def verify(path, kernel_abi="", check_defaults=False):
         if hashlib.sha256(kernel[:size]).hexdigest() != manifest["kernel_sha256"]:
             raise ValueError("Kernel manifest digest differs")
         with (package / "mv100/rootfs.ext4").open("rb") as stream:
-            if check_defaults:
+            if check_defaults or check_apt:
                 with tempfile.TemporaryDirectory(prefix="ec6108-verify-") as temporary:
                     filesystem = Path(temporary) / "root.ext4"
                     with filesystem.open("wb") as expanded:
                         rootfs = inspect(stream, expanded)
-                    verify_defaults(filesystem)
+                    verify_defaults(filesystem, manifest, check_apt)
             else:
                 rootfs = inspect(stream)
         if rootfs != manifest["rootfs"]:
@@ -144,8 +166,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kernel-abi", default="")
     parser.add_argument("--check-defaults", action="store_true")
+    parser.add_argument("--check-apt", action="store_true")
     parser.add_argument("images", nargs="+", type=Path)
     args = parser.parse_args()
     for image in args.images:
-        metadata = verify(image, args.kernel_abi, args.check_defaults)
+        metadata = verify(image, args.kernel_abi, args.check_defaults, args.check_apt)
         print(image.name + ": verified; " + metadata["kernel_release"] + "; hardware boot test pending")

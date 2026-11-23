@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       build_run:
-        description: Successful EC6108V9 USB build run ID on main
+        description: Successful main USB build run ID with a new kernel_abi
         required: true
         type: string
 
@@ -45,7 +45,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y dosfstools mtools e2fsprogs
-          python3 tools/build-apt-kernel.py image/images/*.img.xz "$PACKAGE_VERSION" deb
+          python3 tools/build-apt-kernel.py --require-abi image/images/*.img.xz "$PACKAGE_VERSION" deb
       - uses: actions/upload-artifact@v7
         with:
           name: ec6108v9-apt-deb

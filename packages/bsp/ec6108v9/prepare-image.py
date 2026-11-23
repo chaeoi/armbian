@@ -2,47 +2,20 @@
 """Prepare the mounted Armbian filesystem and its appended-DTB kernel."""
 # SPDX-License-Identifier: GPL-2.0-only
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import shutil
-import subprocess
-
-from uimage import make_image, validate_image
+from kernel_package import assemble
 
 
 def prepare(root, staging, source, version):
     root = root.resolve()
-    if root == Path("/") or not (root / "etc/armbian-release").is_file():
-        raise ValueError("Expected a separate Armbian image filesystem")
     board = json.loads((source / "config/boards/ec6108v9.json").read_text())
     info = json.loads((source / "config/sources/linux-hi3798mv100.json").read_text())
-    modules = [path for path in (root / "lib/modules").iterdir() if path.is_dir()]
-    if len(modules) != 1:
-        raise ValueError("Exactly one installed kernel is required")
-    release = modules[0].name
-    kernel = root / "boot" / ("vmlinuz-" + release)
-    # ARM32 dtbs_install flattens the vendor directory in this kernel.
-    dtbs = [directory / relative
-            for directory in (root / "boot" / ("dtb-" + release),
-                              root / "usr/lib" / ("linux-image-" + release))
-            for relative in (board["dtb_target"], Path(board["dtb_target"]).name)]
-    dtb = next((path for path in dtbs if path.is_file()), None)
-    if not kernel.is_file() or dtb is None:
-        raise ValueError("Installed kernel or EC6108V9 DTB is missing; checked: " +
-                         ", ".join(map(str, [kernel, *dtbs])))
-    for name, expected in (("mmc0", "/soc@f0000000/ahb/mmc@9830000"),
-                           ("mmc1", "/soc@f0000000/ahb/mmc@9820000")):
-        actual = subprocess.check_output(["fdtget", str(dtb), "/aliases", name], text=True).strip()
-        if actual != expected:
-            raise ValueError("Compiled DTB has an unsafe storage alias: " + name)
-    image = make_image(kernel.read_bytes(), dtb.read_bytes(), release, info["source_date_epoch"],
-                       board["kernel_load_address"], board["kernel_read_bytes"])
-    validate_image(image, board["kernel_read_bytes"])
+    image, kernel, _ = assemble(root, board, info["source_date_epoch"])
     staging.mkdir(parents=True, exist_ok=True)
     (staging / "uImage").write_bytes(image)
-    metadata = {"release": version, "kernel_release": release, "kernel_bytes": len(image),
-                "kernel_sha256": hashlib.sha256(image).hexdigest(),
+    metadata = {"release": version, **kernel,
                 "source": info, "framework": json.loads((source / "config/sources/armbian-build.json").read_text()),
                 "tested_boot": False, "private_device_configuration": False}
     (staging / "image.json").write_text(json.dumps(metadata, indent=2) + "\n")

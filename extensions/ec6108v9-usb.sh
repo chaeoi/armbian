@@ -45,6 +45,10 @@ function extension_prepare_config__ec6108v9_usb() {
 function post_customize_image__900_ec6108v9_runtime() {
 	local bsp="${SRC}/packages/bsp/ec6108v9"
 	mkdir -p "${SDCARD}/etc/default" "${SDCARD}/etc/systemd/network"
+	local deb="/tmp/armbian-kernel-ec6108v9-image.deb"
+	python3 "${bsp}/kernel_package.py" "${SDCARD}" "${SRC}" "${SDCARD}${deb}"
+	chroot_sdcard "EC6108V9_IMAGE_BUILD=1 dpkg --install '${deb}'"
+	rm -f "${SDCARD}${deb}"
 	# Keep the driver reset needed for warm boots. Users configure Wi-Fi themselves.
 	systemctl --root="${SDCARD}" disable wpa_supplicant.service
 	install -Dm755 "${bsp}/wifi-clean-shutdown.sh" "${SDCARD}/usr/lib/systemd/system-shutdown/ec6108-wifi-reset"
@@ -122,6 +126,10 @@ function post_customize_image__900_ec6108v9_runtime() {
 function pre_umount_final_image__ec6108v9_usb_payload() {
 	local staging="${WORKDIR}/ec6108v9-usb"
 	mkdir -p "${staging}"
+	install -Dm644 "${SRC}/config/apt/ec6108v9-archive-keyring.asc" \
+		"${MOUNT}/usr/share/keyrings/ec6108v9-archive-keyring.asc"
+	install -Dm644 "${SRC}/config/apt/ec6108v9.sources" \
+		"${MOUNT}/etc/apt/sources.list.d/ec6108v9.sources"
 	python3 "${SRC}/packages/bsp/ec6108v9/prepare-image.py" \
 		--root "${MOUNT}" --staging "${staging}" --source-root "${SRC}" --version "${version}"
 }

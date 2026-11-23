@@ -106,13 +106,13 @@ python3 tools/verify-usb.py output/images/*.img.xz
 
 在 USB 构建工作流中为新内核填写递增的 `kernel_abi`。参数会进入内核版本以及 Armbian 构建缓存标识。
 在 `main` 成功完成镜像构建后，用该运行的 ID 启动 [APT 发布工作流](https://github.com/chaeoi/armbian-ec6108v9/actions/workflows/apt.yml)。
-它从已校验的镜像提取匹配的内核、设备树和模块，并使用工作流运行号和重试号生成递增的 Debian 包版本。
+它从已校验的镜像提取匹配的内核、设备树和模块。发布包版本按内核 ABI、工作流运行号和重试号排序，已刷入较新 ABI 的镜像会保留其内核，直到对应或更新的 ABI 发布。
 
 GitHub Actions 使用 `EC6108V9_APT_SIGNING_KEY` 签署索引，并部署到 GitHub Pages。
-已接入的盒子通过 `apt update` 和 `apt upgrade` 更新 `armbian-kernel-ec6108v9`。
+新构建的镜像预装仓库公钥、源配置和 `armbian-kernel-ec6108v9`，刷入后用 `apt update` 和 `apt upgrade` 获取已发布的更新。
 软件包使用本板的存储布局校验、写入并读回 eMMC 内核分区。重启后由系统服务验证当前内核与安装记录。
 
-接入新装盒子时，从可信源码版本安装 [公钥](../config/apt/ec6108v9-archive-keyring.asc) 到
+为早期镜像接入更新时，从可信源码版本安装 [公钥](../config/apt/ec6108v9-archive-keyring.asc) 到
 `/usr/share/keyrings/ec6108v9-archive-keyring.asc`，并把 [源配置](../config/apt/ec6108v9.sources) 装到
 `/etc/apt/sources.list.d/ec6108v9.sources`。运行 `apt update`，再运行
 `apt install armbian-kernel-ec6108v9` 完成首次接入。

@@ -32,7 +32,8 @@ Armbian-unofficial_26.11.0-trunk_Ec6108v9_jammy_edge_<kernel>_minimal.img.xz
 
 ## 软件更新
 
-本项目通过 GitHub Pages 提供签名的 EC6108V9 APT 软件源。发布、首次接入和升级流程见 [构建指南](docs/BUILD.md#发布板级-apt-软件包)。
+新构建的镜像预装本项目的签名 APT 源和板级内核包。正式发布后，运行 `apt update` 和 `apt upgrade` 即可升级。
+早期镜像接入及软件包发布流程见 [构建指南](docs/BUILD.md#发布板级-apt-软件包)。
 
 ## 构建
 
