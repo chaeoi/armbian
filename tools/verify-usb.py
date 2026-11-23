@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import sys
 import zlib
 
@@ -17,7 +18,7 @@ from usb_disk import contents, DISK_LAYOUT
 from usb_layout import boot_environment, flash_environment, flash_positions
 
 
-def verify(path):
+def verify(path, kernel_abi=""):
     checksum = path.with_name(path.name + ".sha")
     if checksum.exists() or path.name.endswith(".img.xz"):
         fields = checksum.read_text().split()
@@ -33,6 +34,9 @@ def verify(path):
                 or manifest["board"] != "ec6108v9" or manifest["emmc_bytes"] != BOARD["emmc_bytes"]
                 or manifest["disk"] != DISK_LAYOUT):
             raise ValueError("Unexpected board image")
+        if kernel_abi and (not re.fullmatch(r"[1-9][0-9]{0,5}", kernel_abi)
+                           or not manifest["kernel_release"].endswith(f"-ec6108v9.{kernel_abi}-edge-hi3798mv100")):
+            raise ValueError("USB image lacks the requested EC6108V9 kernel ABI")
         positions = flash_positions(BOARD, manifest["rootfs"]["expanded_bytes"])
         if set(manifest["files"]) != set(positions):
             raise ValueError("Unexpected flashing file set")
@@ -98,7 +102,9 @@ def verify(path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--kernel-abi", default="")
     parser.add_argument("images", nargs="+", type=Path)
-    for image in parser.parse_args().images:
-        metadata = verify(image)
+    args = parser.parse_args()
+    for image in args.images:
+        metadata = verify(image, args.kernel_abi)
         print(image.name + ": verified; " + metadata["kernel_release"] + "; hardware boot test pending")

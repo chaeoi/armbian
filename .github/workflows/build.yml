@@ -67,7 +67,7 @@ jobs:
           [[ -z "$EC6108_KERNEL_ABI" || "$EC6108_KERNEL_ABI" =~ ^[1-9][0-9]{0,5}$ ]]
           ./compile.sh build BOARD=ec6108v9 BRANCH=edge RELEASE=jammy \
             BUILD_MINIMAL=yes BUILD_DESKTOP=no KERNEL_CONFIGURE=no \
-            KERNEL_GIT=shallow PREFER_DOCKER=no
+            KERNEL_GIT=shallow PREFER_DOCKER=no EC6108_KERNEL_ABI="$EC6108_KERNEL_ABI"
       - name: Save native build artifacts
         if: always()
         uses: actions/cache/save@v5
@@ -78,7 +78,9 @@ jobs:
             work/armbian-build/cache/rootfs
           key: ec6108v9-jammy-${{ hashFiles('config/sources/armbian-build.json', 'config/sources/linux-hi3798mv100.json', 'config/kernel/**', 'patch/**') }}-${{ github.run_id }}
       - name: Verify USB installer disk image
-        run: python3 tools/verify-usb.py output/images/*.img.xz
+        env:
+          EC6108_KERNEL_ABI: ${{ inputs.kernel_abi }}
+        run: python3 tools/verify-usb.py --kernel-abi "$EC6108_KERNEL_ABI" output/images/*.img.xz
       - name: Export corresponding adaptation sources
         run: ./compile.sh source
       - uses: actions/upload-artifact@v7

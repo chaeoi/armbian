@@ -2,9 +2,14 @@
 
 function custom_kernel_config__ec6108v9_apt_abi() {
 	if [[ -n "${EC6108_KERNEL_ABI:-}" ]]; then
-		[[ "${EC6108_KERNEL_ABI}" =~ ^[1-9][0-9]{0,5}$ ]] ||
-			exit_with_error "Invalid EC6108V9 kernel ABI suffix" "${EC6108_KERNEL_ABI}"
-		opts_val["LOCALVERSION"]="\"-ec6108v9.${EC6108_KERNEL_ABI}\""
+		local abi_suffix="-ec6108v9.${EC6108_KERNEL_ABI}"
+		opts_val["LOCALVERSION"]="\"${abi_suffix}\""
+		# The pinned framework derives package paths from compile_kernel's
+		# version, which by default omits CONFIG_LOCALVERSION. The first
+		# invocation of this hook only calculates the artifact cache key.
+		if [[ -n "${kernel_work_dir:-}" && "$PWD" == "${kernel_work_dir}" && -f .config ]]; then
+			version="$(grab_version "${kernel_work_dir}")${abi_suffix}"
+		fi
 	fi
 }
 
@@ -20,6 +25,8 @@ function extension_finish_config__ec6108v9_output() {
 
 function extension_prepare_config__ec6108v9_usb() {
 	[[ "${BOARD}" == "ec6108v9" ]] || exit_with_error "Unsupported USB installer board" "${BOARD}"
+	[[ -z "${EC6108_KERNEL_ABI:-}" || "${EC6108_KERNEL_ABI}" =~ ^[1-9][0-9]{0,5}$ ]] ||
+		exit_with_error "Invalid EC6108V9 kernel ABI suffix" "${EC6108_KERNEL_ABI}"
 	add_packages_to_image python3 openssh-server iw wpasupplicant exfatprogs dosfstools e2fsprogs
 }
 
