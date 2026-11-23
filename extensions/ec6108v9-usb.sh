@@ -1,15 +1,26 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-function custom_kernel_config__ec6108v9_apt_abi() {
+function artifact_kernel_version_parts__ec6108v9_apt_abi() {
 	if [[ -n "${EC6108_KERNEL_ABI:-}" ]]; then
-		local abi_suffix="-ec6108v9.${EC6108_KERNEL_ABI}"
-		opts_val["LOCALVERSION"]="\"${abi_suffix}\""
-		# The pinned framework derives package paths from compile_kernel's
-		# version, which by default omits CONFIG_LOCALVERSION. The first
-		# invocation of this hook only calculates the artifact cache key.
-		if [[ -n "${kernel_work_dir:-}" && "$PWD" == "${kernel_work_dir}" && -f .config ]]; then
-			version="$(grab_version "${kernel_work_dir}")${abi_suffix}"
-		fi
+		artifact_version_parts["A"]="${EC6108_KERNEL_ABI}"
+		artifact_version_part_order+=("0090-A")
+	fi
+}
+
+function custom_kernel_make_params__ec6108v9_apt_abi() {
+	if [[ -n "${EC6108_KERNEL_ABI:-}" ]]; then
+		# Kbuild uses the last LOCALVERSION assignment on its command line.
+		common_make_params_quoted+=("LOCALVERSION=-ec6108v9.${EC6108_KERNEL_ABI}-${BRANCH}-${LINUXFAMILY}")
+	fi
+}
+
+function custom_kernel_config__ec6108v9_apt_abi() {
+	# The pinned framework builds the .deb paths from compile_kernel's
+	# version. Set it only when configuring the actual kernel worktree.
+	if [[ -n "${EC6108_KERNEL_ABI:-}" && -n "${kernel_work_dir:-}" &&
+		"$PWD" == "${kernel_work_dir}" && -f .config ]]; then
+		version="$(grab_version "${kernel_work_dir}")-ec6108v9.${EC6108_KERNEL_ABI}"
+		display_alert "EC6108V9 kernel release" "${version}-${BRANCH}-${LINUXFAMILY}" "info"
 	fi
 }
 
