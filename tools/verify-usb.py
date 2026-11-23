@@ -6,7 +6,9 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import subprocess
 import sys
+import tempfile
 import zlib
 
 from port import BOARD, PROJECT
@@ -18,7 +20,38 @@ from usb_disk import contents, DISK_LAYOUT
 from usb_layout import boot_environment, flash_environment, flash_positions
 
 
-def verify(path, kernel_abi=""):
+def verify_defaults(filesystem):
+    def debugfs(command):
+        return subprocess.check_output(["debugfs", "-R", command, str(filesystem)],
+                                       text=True, stderr=subprocess.DEVNULL)
+
+    def names(directory):
+        return [line.split("/")[5] for line in debugfs(f"ls -p {directory}").splitlines()
+                if line.startswith("/") and line.count("/") >= 6]
+
+    fstab = [line.split() for line in debugfs("cat /etc/fstab").splitlines()
+             if line.strip() and not line.lstrip().startswith("#")]
+    if len(fstab) != 1 or fstab[0][:3] != [BOARD["layout"]["root_partition"], "/", "ext4"]:
+        raise ValueError("Expected only the internal eMMC root in fstab")
+
+    system_units = "/etc/systemd/system"
+    entries = names(system_units)
+    enabled = [unit for name in entries if name.endswith((".wants", ".requires"))
+               for unit in names(f"{system_units}/{name}")]
+    if (any(unit.startswith(("wpa_supplicant", "ec6108-wifi-")) for unit in enabled)
+            or any(unit.endswith((".automount", ".mount")) for unit in entries + enabled)
+            or "ec6108-wifi-power-save-off.service" in entries
+            or "90-ec6108-wifi.rules" in names("/etc/udev/rules.d")
+            or "20-wifi.network" in names("/etc/systemd/network")):
+        raise ValueError("Unexpected automatic Wi-Fi or removable storage setup")
+    if (any(name.endswith(".conf") for name in names("/etc/wpa_supplicant"))
+            or set(names("/etc/NetworkManager/system-connections")) - {".", ".."}
+            or any(re.search(r"^\s*wifis\s*:", debugfs(f"cat /etc/netplan/{name}"), re.M)
+                   for name in names("/etc/netplan") if name.endswith(".yaml"))):
+        raise ValueError("Unexpected Wi-Fi connection profile")
+
+
+def verify(path, kernel_abi="", check_defaults=False):
     checksum = path.with_name(path.name + ".sha")
     if checksum.exists() or path.name.endswith(".img.xz"):
         fields = checksum.read_text().split()
@@ -91,7 +124,14 @@ def verify(path, kernel_abi=""):
         if hashlib.sha256(kernel[:size]).hexdigest() != manifest["kernel_sha256"]:
             raise ValueError("Kernel manifest digest differs")
         with (package / "mv100/rootfs.ext4").open("rb") as stream:
-            rootfs = inspect(stream)
+            if check_defaults:
+                with tempfile.TemporaryDirectory(prefix="ec6108-verify-") as temporary:
+                    filesystem = Path(temporary) / "root.ext4"
+                    with filesystem.open("wb") as expanded:
+                        rootfs = inspect(stream, expanded)
+                    verify_defaults(filesystem)
+            else:
+                rootfs = inspect(stream)
         if rootfs != manifest["rootfs"]:
             raise ValueError("Sparse filesystem readback differs")
         sidecar = path.with_name(path.name.split(".img", 1)[0] + ".manifest.json")
@@ -103,8 +143,9 @@ def verify(path, kernel_abi=""):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kernel-abi", default="")
+    parser.add_argument("--check-defaults", action="store_true")
     parser.add_argument("images", nargs="+", type=Path)
     args = parser.parse_args()
     for image in args.images:
-        metadata = verify(image, args.kernel_abi)
+        metadata = verify(image, args.kernel_abi, args.check_defaults)
         print(image.name + ": verified; " + metadata["kernel_release"] + "; hardware boot test pending")

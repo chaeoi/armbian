@@ -48,11 +48,7 @@ def prepare(root, staging, source, version):
     (staging / "image.json").write_text(json.dumps(metadata, indent=2) + "\n")
     (root / "usr/share/ec6108v9").mkdir(parents=True, exist_ok=True)
     (root / "usr/share/ec6108v9/release.json").write_text(json.dumps(metadata, indent=2) + "\n")
-    (root / "etc/fstab").write_text(
-        "/dev/mmcblk0p3 / ext4 defaults,noatime 0 1\n"
-        "/dev/mmcblk1p1 /mnt/sdcard auto defaults,noatime,nosuid,nodev,nofail,"
-        "x-systemd.automount,x-systemd.device-timeout=5s,x-systemd.mount-timeout=30s 0 0\n")
-    (root / "mnt/sdcard").mkdir(parents=True, exist_ok=True)
+    (root / "etc/fstab").write_text("/dev/mmcblk0p3 / ext4 defaults,noatime 0 1\n")
     for name in ("etc/machine-id", "var/lib/dbus/machine-id"):
         path = root / name
         path.unlink(missing_ok=True)
@@ -61,16 +57,16 @@ def prepare(root, staging, source, version):
     (root / "var/lib/dbus/machine-id").symlink_to("/etc/machine-id")
     for path in (root / "etc/ssh").glob("ssh_host_*"):
         path.unlink()
-    for name in ("root/.ssh", "var/lib/ec6108v9", "etc/ec6108-system.json",
-                 "etc/wpa_supplicant/wpa_supplicant-wlan0.conf"):
+    for name in ("root/.ssh", "var/lib/ec6108v9", "etc/ec6108-system.json"):
         path = root / name
         if path.is_dir() and not path.is_symlink():
             shutil.rmtree(path)
         else:
             path.unlink(missing_ok=True)
-    for path in (root / "etc/NetworkManager/system-connections").glob("*"):
-        if path.is_file() or path.is_symlink():
-            path.unlink()
+    for pattern in ("etc/NetworkManager/system-connections/*", "etc/wpa_supplicant/*.conf"):
+        for path in root.glob(pattern):
+            if path.is_file() or path.is_symlink():
+                path.unlink()
     # These files are unused by this bootloader. Keep the kernel and DTB for inspection.
     for pattern in ("initrd.img*", "uInitrd*", "boot.scr*", "boot.cmd", "armbianEnv.txt"):
         for path in (root / "boot").glob(pattern):

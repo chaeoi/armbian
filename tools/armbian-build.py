@@ -44,8 +44,7 @@ def prepare(destination):
         for path in directory.glob("*.patch"):
             shutil.copy2(path, patch_dir / path.name)
     helpers = destination / "packages/bsp/ec6108v9"
-    for name in ("uimage.py", "wifi-refresh-networkd.py", "wifi-clean-shutdown.sh",
-                 "fix-system-config.py", "verify-direct-system.py"):
+    for name in ("uimage.py", "wifi-clean-shutdown.sh", "verify-direct-system.py"):
         shutil.copy2(PROJECT / "tools" / name, helpers / name)
     return specification
 

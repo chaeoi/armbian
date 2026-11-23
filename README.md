@@ -25,6 +25,7 @@ Armbian-unofficial_26.11.0-trunk_Ec6108v9_jammy_edge_<kernel>_minimal.img.xz
 4. 首次启动通过有线 DHCP 获取地址。SSH 初始账号为 `root`，密码为 `1234567890`。登录后修改密码。
 
 安装会删除内置系统及数据，最终只有一个 Armbian。SD 和其他 USB 存储不在烧写目标内。
+新构建的镜像保留存储和无线支持，SD、USB 存储挂载及 Wi-Fi 连接由用户配置。
 样机已用 USB 启动短接恢复。不同 PCB 的短接点可能不同，按板号和丝印确认位置。
 镜像是内置系统的安装盘，包含已准备好的 FAT32 分区和烧写文件。
 完整步骤、盘内文件和验证范围见 [安装指南](docs/INSTALL.md) 与 [USB 构建记录](docs/validation/USB-PIPELINE-20261108.md)。
@@ -69,7 +70,7 @@ packages/blobs/hi3798mv100/              固定摘要的引导参数和已验证
 | USB / SD | 两个 USB 口；SD 4-bit / 25 MHz，r6 下有正常卡读写及重启记录 |
 | 网络 | Ethernet；RTL8188ETV / rtl8xxxu，保留已验证的无线固件和关机复位 |
 | 安装布局 | 14 MiB 引导、20 MiB 内核、其余空间单一根分区 |
-| 首次启动 | 扩展 ext4、独立 SSH 主机密钥、按 eMMC 身份生成本地 MAC，SD 按固定卡槽自动挂载 |
+| 首次启动 | 扩展 ext4、独立 SSH 主机密钥、按 eMMC 身份生成本地 MAC |
 | 未启用 | HDMI、音频、GPU、视频解码；温度与动态调频接口尚未提供 |
 
 此前已验证的实机基线为 Armbian 26.8.3 / Ubuntu 22.04.5，内核 `7.3.0-rc7-ec6108v9-r6`。

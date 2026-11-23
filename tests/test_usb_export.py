@@ -23,7 +23,7 @@ def load(name, path):
 
 
 @unittest.skipUnless(all(shutil.which(name) for name in
-                        ("dtc", "fdtget", "mkfs.ext4", "mkfs.fat", "fsck.fat", "mcopy", "mdir")),
+                        ("dtc", "fdtget", "debugfs", "mkfs.ext4", "mkfs.fat", "fsck.fat", "mcopy", "mdir")),
                      "Install device-tree-compiler, e2fsprogs, dosfstools and mtools for the disk fixture")
 class USBExportTests(unittest.TestCase):
     def test_prepare_export_and_verify_without_device_credentials(self):
@@ -34,7 +34,7 @@ class USBExportTests(unittest.TestCase):
             base = Path(temporary)
             root, staging, output = [base / name for name in ("root", "staging", "output")]
             release = "fixture-kernel"
-            for directory in ("etc/ssh", "root/.ssh", "boot/dtb-" + release,
+            for directory in ("etc/ssh", "etc/wpa_supplicant", "root/.ssh", "boot/dtb-" + release,
                               "lib/modules/" + release, "var/lib/dbus", "var/lib/apt/lists",
                               "var/cache/apt/archives", "var/lib/dpkg"):
                 (root / directory).mkdir(parents=True)
@@ -42,6 +42,8 @@ class USBExportTests(unittest.TestCase):
             (root / "etc/ssh/ssh_host_ed25519_key").write_text("fixture identity, must be removed")
             (root / "root/.ssh/authorized_keys").write_text("fixture login, must be removed")
             (root / "etc/machine-id").write_text("fixture-machine")
+            (root / "etc/fstab").write_text("/dev/mmcblk1p1 /mnt/sdcard auto x-systemd.automount 0 0\n")
+            (root / "etc/wpa_supplicant/wpa_supplicant.conf").write_text("fixture Wi-Fi settings")
             (root / "var/lib/dbus/machine-id").write_text("fixture-machine")
             (root / "var/lib/apt/lists/build-index").write_text("discarded build cache")
             (root / "var/cache/apt/archives/build.deb").write_text("discarded build download")
@@ -76,7 +78,7 @@ class USBExportTests(unittest.TestCase):
             disk = exporter.export(image, staging, output, version, PROJECT)
             self.assertEqual(disk, image)
             self.assertEqual(disk.stat().st_size, 512 * 1024 * 1024)
-            manifest = verifier.verify(disk)
+            manifest = verifier.verify(disk, check_defaults=True)
             self.assertFalse(manifest["tested_boot"])
             self.assertFalse(manifest["private_device_configuration"])
             self.assertEqual(manifest["rootfs"]["expanded_bytes"], 64 * 1024 * 1024)

@@ -45,7 +45,8 @@ function extension_prepare_config__ec6108v9_usb() {
 function post_customize_image__900_ec6108v9_runtime() {
 	local bsp="${SRC}/packages/bsp/ec6108v9"
 	mkdir -p "${SDCARD}/etc/default" "${SDCARD}/etc/systemd/network"
-	ARMBIAN_ROOT="${SDCARD}" python3 "${bsp}/fix-system-config.py"
+	# Keep the driver reset needed for warm boots. Users configure Wi-Fi themselves.
+	systemctl --root="${SDCARD}" disable wpa_supplicant.service
 	install -Dm755 "${bsp}/wifi-clean-shutdown.sh" "${SDCARD}/usr/lib/systemd/system-shutdown/ec6108-wifi-reset"
 	install -Dm755 "${bsp}/firstboot.sh" "${SDCARD}/usr/local/sbin/ec6108v9-firstboot"
 	install -Dm755 "${bsp}/verify-direct-system.py" "${SDCARD}/usr/local/sbin/ec6108-verify-system"
@@ -95,17 +96,12 @@ function post_customize_image__900_ec6108v9_runtime() {
 		[DHCPv4]
 		UseHostname=no
 	NETWORK
-	cat > "${SDCARD}/etc/systemd/network/20-wifi.network" <<-'NETWORK'
-		[Match]
-		Name=wlan0
-		[Network]
-		DHCP=yes
-		LinkLocalAddressing=yes
-		IPv6AcceptRA=yes
-		[DHCPv4]
-		UseHostname=no
-	NETWORK
-	printf '[Unit]\nConditionPathExists=/etc/wpa_supplicant/wpa_supplicant-wlan0.conf\n' >> "${SDCARD}/etc/systemd/system/wpa_supplicant@wlan0.service.d/10-ec6108-device.conf"
+	# The board kernel needs the journal sockets without SCM_SECURITY.
+	local socket
+	for socket in syslog.socket systemd-journald.socket systemd-journald-dev-log.socket; do
+		mkdir -p "${SDCARD}/etc/systemd/system/${socket}.d"
+		printf '[Socket]\nPassSecurity=no\n' > "${SDCARD}/etc/systemd/system/${socket}.d/10-ec6108-compat.conf"
+	done
 	mkdir -p "${SDCARD}/etc/systemd/journald.conf.d"
 	printf '[Journal]\nStorage=volatile\nRuntimeMaxUse=8M\n' > "${SDCARD}/etc/systemd/journald.conf.d/10-ec6108v9.conf"
 	python3 - "${SRC}" "${SDCARD}" <<-'PY'
